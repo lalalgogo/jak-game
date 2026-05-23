@@ -524,9 +524,7 @@ function AIGame({ onBack }) {
 // ══════════════════════════════════════════════
 function OnlineGame({ onBack }) {
   const [screen, setScreen] = useState("lobby");
-  const [timeLeft, setTimeLeft] = useState(20);
-  const timerRef = useRef(null);
-  const [roomId,   setRoomId]   = useState("");
+  const [roomId, setRoomId] = useState("");
   const [inputId,  setInputId]  = useState("");
   const [myRole,   setMyRole]   = useState("");
   const [myName,   setMyName]   = useState("");
@@ -831,37 +829,6 @@ function OnlineGame({ onBack }) {
     );
   }
 
-  // タイマー（if(!gs)の前に置く必要あり）
-  useEffect(() => {
-    if (!gs) return;
-    const acting = gs.turn === myRole && gs.phase === "playing" && !gs.result;
-    if (acting) {
-      setTimeLeft(20);
-      let t = 20;
-      timerRef.current = setInterval(() => {
-        t -= 1;
-        setTimeLeft(t);
-        if (t <= 0) {
-          clearInterval(timerRef.current);
-          const { gs: g, myRole: role, roomId: rid } = stRef.current;
-          if (!g || !rid) return;
-          const opC = role === "host" ? g.guest.chips : g.host.chips;
-          const meName = role === "host" ? g.host.name : g.guest.name;
-          const winner = role === "host" ? "guest" : "host";
-          const seq = Date.now();
-          const updates = {};
-          updates[`rooms/${rid}/result`] = winner;
-          updates[`rooms/${rid}/showCards`] = true;
-          updates[`rooms/${rid}/lastAction`] = { msg: `${meName}が時間切れ → フォールド`, t: "i", seq };
-          updates[`rooms/${rid}/${winner}/chips`] = opC + g.pot;
-          update(ref(db), updates);
-        }
-      }, 1000);
-    } else {
-      clearInterval(timerRef.current);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [gs?.turn, gs?.result, gs?.phase]);
 
   if (!gs) return <div style={S.root}><div style={S.bg}/><div style={{ color: "#ffe08a", margin: "auto", marginTop: "40vh" }}>接続中…</div></div>;
 
@@ -908,14 +875,6 @@ function OnlineGame({ onBack }) {
           </div>
         </div>
         <div style={{ margin: "10px 0" }}><Log entries={log} /></div>
-        {canAct && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,.1)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(timeLeft / 20) * 100}%`, background: timeLeft <= 5 ? "#ff7878" : timeLeft <= 10 ? "#ffe08a" : "#7dde8a", transition: "width 1s linear, background .3s" }}/>
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: timeLeft <= 5 ? "#ff7878" : "#ffe08a", minWidth: 28, fontFamily: "monospace" }}>{timeLeft}s</div>
-          </div>
-        )}
         {!myTurn && !isResult && (
           <div style={{ textAlign: "center", color: "#c9a84c", fontSize: 12, padding: "6px 0", animation: "pulse .8s infinite alternate" }}>
             {opNameFromGs()}が考え中…
