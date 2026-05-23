@@ -831,14 +831,7 @@ function OnlineGame({ onBack }) {
     );
   }
 
-  if (!gs) return <div style={S.root}><div style={S.bg}/><div style={{ color: "#ffe08a", margin: "auto", marginTop: "40vh" }}>接続中…</div></div>;
-
-  const isResult  = !!gs.result;
-  const myTurn    = isMyTurn();
-  const needCall  = (gs.toCall ?? 0) > 0 && myTurn;
-  const canAct    = myTurn && !isResult;
-
-  // タイマー
+  // タイマー（if(!gs)の前に置く必要あり）
   useEffect(() => {
     if (!gs) return;
     const acting = gs.turn === myRole && gs.phase === "playing" && !gs.result;
@@ -850,10 +843,8 @@ function OnlineGame({ onBack }) {
         setTimeLeft(t);
         if (t <= 0) {
           clearInterval(timerRef.current);
-          // フォールド処理を直接実行
           const { gs: g, myRole: role, roomId: rid } = stRef.current;
           if (!g || !rid) return;
-          const myC = role === "host" ? g.host.chips : g.guest.chips;
           const opC = role === "host" ? g.guest.chips : g.host.chips;
           const meName = role === "host" ? g.host.name : g.guest.name;
           const winner = role === "host" ? "guest" : "host";
@@ -871,6 +862,13 @@ function OnlineGame({ onBack }) {
     }
     return () => clearInterval(timerRef.current);
   }, [gs?.turn, gs?.result, gs?.phase]);
+
+  if (!gs) return <div style={S.root}><div style={S.bg}/><div style={{ color: "#ffe08a", margin: "auto", marginTop: "40vh" }}>接続中…</div></div>;
+
+  const isResult  = !!gs.result;
+  const myTurn    = isMyTurn();
+  const needCall  = (gs.toCall ?? 0) > 0 && myTurn;
+  const canAct    = myTurn && !isResult;
   const myWin     = gs.result === myRole;
   const opWin     = gs.result === opRole();
   const mc = myCard(); const oc = opCard(); const hc = hiddenCard();
