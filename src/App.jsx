@@ -839,25 +839,32 @@ function OnlineGame({ onBack }) {
   const canAct    = myTurn && !isResult;
 
   // タイマー
-  const canActRef = useRef(false);
-  canActRef.current = canAct;
-  const sendFoldRef = useRef(null);
-  sendFoldRef.current = () => sendAction("fold");
-
   useEffect(() => {
     if (!gs) return;
     const acting = gs.turn === myRole && gs.phase === "playing" && !gs.result;
     if (acting) {
       setTimeLeft(20);
+      let t = 20;
       timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            if (sendFoldRef.current) sendFoldRef.current();
-            return 0;
-          }
-          return prev - 1;
-        });
+        t -= 1;
+        setTimeLeft(t);
+        if (t <= 0) {
+          clearInterval(timerRef.current);
+          // フォールド処理を直接実行
+          const { gs: g, myRole: role, roomId: rid } = stRef.current;
+          if (!g || !rid) return;
+          const myC = role === "host" ? g.host.chips : g.guest.chips;
+          const opC = role === "host" ? g.guest.chips : g.host.chips;
+          const meName = role === "host" ? g.host.name : g.guest.name;
+          const winner = role === "host" ? "guest" : "host";
+          const seq = Date.now();
+          const updates = {};
+          updates[`rooms/${rid}/result`] = winner;
+          updates[`rooms/${rid}/showCards`] = true;
+          updates[`rooms/${rid}/lastAction`] = { msg: `${meName}が時間切れ → フォールド`, t: "i", seq };
+          updates[`rooms/${rid}/${winner}/chips`] = opC + g.pot;
+          update(ref(db), updates);
+        }
       }, 1000);
     } else {
       clearInterval(timerRef.current);
