@@ -524,6 +524,8 @@ function AIGame({ onBack }) {
 // ══════════════════════════════════════════════
 function OnlineGame({ onBack }) {
   const [screen, setScreen] = useState("lobby");
+  const [timeLeft, setTimeLeft] = useState(20);
+  const timerRef = useRef(null);
   const [roomId,   setRoomId]   = useState("");
   const [inputId,  setInputId]  = useState("");
   const [myRole,   setMyRole]   = useState("");
@@ -578,20 +580,23 @@ function OnlineGame({ onBack }) {
     setMyName(name); setMyRole("guest"); setRoomId(rid); setError("");
     await update(ref(db, `rooms/${rid}`), { guest: { name, chips: INIT_CHIPS } });
     subscribeRoom(rid);
-    await dealNewRound(rid, INIT_CHIPS, INIT_CHIPS, 1, snap.val().host.name, name);
+    await dealNewRound(rid, INIT_CHIPS, INIT_CHIPS, 1, snap.val().host.name, name, null);
     setScreen("game");
   }
 
-  async function dealNewRound(rid, hostChips, guestChips, rnd, hName, gName) {
+  async function dealNewRound(rid, hostChips, guestChips, rnd, hName, gName, prevFirst) {
     const [c0, c1, c2] = shuffle(DECK);
     const newPot = ANTE * 2; const seq = Date.now();
+    // 1ラウンド目はランダム、以降は交互
+    const firstPlayer = rnd === 1 ? (Math.random() < 0.5 ? "host" : "guest") : (prevFirst === "host" ? "guest" : "host");
     await set(ref(db, `rooms/${rid}`), {
       phase: "playing", round: rnd,
       host:  { name: hName,  chips: hostChips  - ANTE, card: c0.id },
       guest: { name: gName,  chips: guestChips - ANTE, card: c1.id },
-      hidden: c2.id, pot: newPot, toCall: 0, betRound: 1, turn: "host",
+      hidden: c2.id, pot: newPot, toCall: 0, betRound: 1,
+      turn: firstPlayer, firstPlayer,
       showCards: false, result: null,
-      lastAction: { msg: `── ラウンド ${rnd} ── アンティ各${ANTE} ポット:${newPot}`, t: "i", seq },
+      lastAction: { msg: `── ラウンド ${rnd} ── アンティ各${ANTE} ポット:${newPot} 先攻:${firstPlayer === "host" ? hName : gName}`, t: "i", seq },
     });
   }
 
@@ -628,7 +633,9 @@ function OnlineGame({ onBack }) {
       await update(ref(db), updates); return;
     }
     if (type === "check") {
-      if (g.betRound > 1 || g.turn === opRole()) {
+      // 先攻がチェック→相手のターンへ、後攻がチェック→ショーダウン
+      const iAmFirst = g.firstPlayer === role;
+      if (!iAmFirst || g.betRound > 1) {
         await doShowdown(rid, g, myCardObj, opCardObj, role, meName, seq);
       } else {
         updates[`rooms/${rid}/turn`] = opRole();
@@ -682,7 +689,7 @@ function OnlineGame({ onBack }) {
     const { gs: g, roomId: rid } = stRef.current;
     const hc = g.host.chips; const gc = g.guest.chips;
     if (hc <= 0 || gc <= 0) { await update(ref(db, `rooms/${rid}`), { phase: "gameover" }); return; }
-    await dealNewRound(rid, hc, gc, g.round + 1, g.host.name, g.guest.name);
+    await dealNewRound(rid, hc, gc, g.round + 1, g.host.name, g.guest.name, g.firstPlayer);
   }
 
   // マッチング機能
@@ -830,6 +837,26 @@ function OnlineGame({ onBack }) {
   const myTurn    = isMyTurn();
   const needCall  = (gs.toCall ?? 0) > 0 && myTurn;
   const canAct    = myTurn && !isResult;
+
+  // タイマー
+  useEffect(() => {
+    if (canAct) {
+      setTimeLeft(20);
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            sendAction("fold");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [myTurn, isResult]);
   const myWin     = gs.result === myRole;
   const opWin     = gs.result === opRole();
   const mc = myCard(); const oc = opCard(); const hc = hiddenCard();
@@ -840,7 +867,9 @@ function OnlineGame({ onBack }) {
       <div style={S.play}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <span style={{ fontFamily: "Georgia,serif", color: "#ffe08a", fontSize: 22, letterSpacing: 5 }}>JAK</span>
-          <span style={{ color: "#6050a0", fontSize: 11 }}>ROUND {gs.round}</span>
+          <span style={{ color: "#6050a0", fontSize: 11 }}>
+            ROUND {gs.round} | <span style={{ color: gs.firstPlayer === myRole ? "#c9a84c" : "#a080d0" }}>{gs.firstPlayer === myRole ? "あなた先攻" : "相手先攻"}</span>
+          </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 6, marginBottom: 12 }}>
           <Chips label={myNameFromGs() || "あなた"} val={myChips()} gold />
@@ -867,6 +896,14 @@ function OnlineGame({ onBack }) {
           </div>
         </div>
         <div style={{ margin: "10px 0" }}><Log entries={log} /></div>
+        {canAct && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,.1)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(timeLeft / 20) * 100}%`, background: timeLeft <= 5 ? "#ff7878" : timeLeft <= 10 ? "#ffe08a" : "#7dde8a", transition: "width 1s linear, background .3s" }}/>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: timeLeft <= 5 ? "#ff7878" : "#ffe08a", minWidth: 28, fontFamily: "monospace" }}>{timeLeft}s</div>
+          </div>
+        )}
         {!myTurn && !isResult && (
           <div style={{ textAlign: "center", color: "#c9a84c", fontSize: 12, padding: "6px 0", animation: "pulse .8s infinite alternate" }}>
             {opNameFromGs()}が考え中…
