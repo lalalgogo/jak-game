@@ -284,7 +284,8 @@ function AIGame({ onBack }) {
     dealRound(INIT_CHIPS, INIT_CHIPS, 1, first);
   }
 
-  useEffect(() => { startGame(); }, []);
+  const [started, setStarted] = useState(false);
+  useEffect(() => { if (!started) { setStarted(true); startGame(); } }, []);
 
   function dealRound(pc, ac, r, first) {
     const [c0, c1, c2] = shuffle(DECK);
@@ -417,6 +418,12 @@ function AIGame({ onBack }) {
   const needCall = toCall > 0 && !busy && stage === "bet";
   const canAct   = stage === "bet" && !busy;
   const pWin = result === "p"; const aWin = result === "a";
+
+  if (!pCard || !aCard) return (
+    <div style={S.root}><div style={S.bg}/>
+      <div style={{ color: "#ffe08a", position: "relative", zIndex: 1, margin: "auto", marginTop: "40vh", textAlign: "center" }}>読み込み中…</div>
+    </div>
+  );
 
   return (
     <div style={S.root}>
