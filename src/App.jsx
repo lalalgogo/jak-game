@@ -685,6 +685,83 @@ function OnlineGame({ onBack }) {
     await dealNewRound(rid, hc, gc, g.round + 1, g.host.name, g.guest.name);
   }
 
+  // マッチング機能
+  async function quickMatch() {
+    if (!nameInput.trim()) { setError("名前を入力してや"); return; }
+    const name = nameInput.trim();
+    setMyName(name); setError("");
+    setScreen("matching");
+
+    // 待機中のルームを探す
+    const waitingRef = ref(db, "matching/waiting");
+    const snap = await get(waitingRef);
+
+    if (snap.exists()) {
+      // 待ってる人がいた→参加する
+      const data = snap.val();
+      const rid = data.roomId;
+      const hostName = data.name;
+
+      // 待機リストから削除
+      await remove(waitingRef);
+
+      setMyRole("guest"); setRoomId(rid);
+      const roomSnap = await get(ref(db, `rooms/${rid}`));
+      if (!roomSnap.exists()) {
+        // ルームが消えてた→自分がホストになる
+        await registerAsWaiting(rid, name);
+        return;
+      }
+      await update(ref(db, `rooms/${rid}`), { guest: { name, chips: INIT_CHIPS } });
+      subscribeRoom(rid);
+      await dealNewRound(rid, INIT_CHIPS, INIT_CHIPS, 1, hostName, name);
+      setScreen("game");
+    } else {
+      // 待ってる人いない→自分が待つ
+      const rid = genRoomId();
+      setRoomId(rid);
+      await registerAsWaiting(rid, name);
+    }
+  }
+
+  async function registerAsWaiting(rid, name) {
+    await set(ref(db, `rooms/${rid}`), { phase: "waiting", host: { name, chips: INIT_CHIPS }, guest: null, round: 0 });
+    await set(ref(db, "matching/waiting"), { roomId: rid, name, ts: Date.now() });
+    setMyRole("host");
+    subscribeRoom(rid);
+    // マッチングを監視
+    const matchRef = ref(db, `rooms/${rid}/guest`);
+    const unsub = onValue(matchRef, async (snap) => {
+      if (snap.exists() && snap.val() !== null) {
+        off(matchRef, "value", unsub);
+        await remove(ref(db, "matching/waiting"));
+      }
+    });
+  }
+
+  async function cancelMatching() {
+    await remove(ref(db, "matching/waiting"));
+    if (roomId) await remove(ref(db, `rooms/${roomId}`));
+    if (unsubRef.current) unsubRef.current();
+    setScreen("lobby"); setRoomId("");
+  }
+
+  // マッチング待機画面
+  if (screen === "matching") return (
+    <div style={S.root}>
+      <div style={S.bg}/>
+      <div style={S.center}>
+        <div style={{ fontSize: 22, fontFamily: "serif", color: "#ffe08a", marginBottom: 20 }}>対戦相手を探してるで…</div>
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", border: "3px solid #c9a84c", borderTopColor: "transparent", animation: "spin 1s linear infinite", margin: "0 auto" }}/>
+        </div>
+        <div style={{ color: "#7060a0", fontSize: 13, marginBottom: 24 }}>誰かが参加するのを待ってるで</div>
+        <button style={S.ghost} onClick={cancelMatching}>キャンセル</button>
+      </div>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
   // ロビー画面
   if (screen === "lobby") return (
     <div style={S.root}>
@@ -696,13 +773,14 @@ function OnlineGame({ onBack }) {
             <label style={S.label}>あなたの名前</label>
             <input style={S.input} value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="名前を入力" maxLength={12} />
           </div>
-          <button style={S.gold} onClick={createRoom}>ルームを作る</button>
-          <div style={{ textAlign: "center", color: "#6050a0", fontSize: 12 }}>── または ──</div>
+          <button style={S.gold} onClick={quickMatch}>🔍 対戦相手を探す</button>
+          <div style={{ textAlign: "center", color: "#6050a0", fontSize: 12 }}>── または友達と ──</div>
+          <button style={{ ...S.blue, fontSize: 13 }} onClick={createRoom}>ルームを作る</button>
           <div style={S.inputGroup}>
             <label style={S.label}>ルームID（6文字）</label>
             <input style={S.input} value={inputId} onChange={e => setInputId(e.target.value)} placeholder="例: AB12CD" maxLength={6} />
           </div>
-          <button style={S.blue} onClick={joinRoom}>ルームに参加</button>
+          <button style={{ ...S.blue, fontSize: 13 }} onClick={joinRoom}>ルームに参加</button>
           {error && <div style={{ color: "#ff7878", fontSize: 12, textAlign: "center" }}>{error}</div>}
           <button style={{ ...S.ghost, marginTop: 8 }} onClick={onBack}>← 戻る</button>
         </div>
