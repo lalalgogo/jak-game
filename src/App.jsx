@@ -839,14 +839,21 @@ function OnlineGame({ onBack }) {
   const canAct    = myTurn && !isResult;
 
   // タイマー
+  const canActRef = useRef(false);
+  canActRef.current = canAct;
+  const sendFoldRef = useRef(null);
+  sendFoldRef.current = () => sendAction("fold");
+
   useEffect(() => {
-    if (canAct) {
+    if (!gs) return;
+    const acting = gs.turn === myRole && gs.phase === "playing" && !gs.result;
+    if (acting) {
       setTimeLeft(20);
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
             clearInterval(timerRef.current);
-            sendAction("fold");
+            if (sendFoldRef.current) sendFoldRef.current();
             return 0;
           }
           return prev - 1;
@@ -856,7 +863,7 @@ function OnlineGame({ onBack }) {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [myTurn, isResult]);
+  }, [gs?.turn, gs?.result, gs?.phase]);
   const myWin     = gs.result === myRole;
   const opWin     = gs.result === opRole();
   const mc = myCard(); const oc = opCard(); const hc = hiddenCard();
