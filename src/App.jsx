@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { db } from "./firebaseConfig";
-import {
-  ref, set, get, update, onValue, off, remove
-} from "firebase/database";
+import { ref, set, get, update, onValue, off, remove } from "firebase/database";
 
 const JOKER = { id: "JOKER", label: "🃏", name: "ジョーカー", rank: 3 };
 const ACE   = { id: "ACE",   label: "A",  name: "エース",     rank: 2 };
@@ -57,16 +55,27 @@ function aiAction(card, pot, toCall, aiChips, round) {
   return { type: "check" };
 }
 
+// ── ローカルストレージ ────────────────────────────────
+function loadProfile() {
+  try {
+    const s = localStorage.getItem("jak_profile");
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
+}
+function saveProfile(name, chips) {
+  try { localStorage.setItem("jak_profile", JSON.stringify({ name, chips })); } catch {}
+}
+
 // ── Card ─────────────────────────────────────────────
 function Card({ card, hidden, size, winner }) {
-  const w  = size === "lg" ? 96  : size === "sm" ? 54  : 76;
-  const h  = size === "lg" ? 136 : size === "sm" ? 78  : 108;
-  const fs = size === "lg" ? 38  : size === "sm" ? 18  : 28;
-  const cs = size === "lg" ? 44  : size === "sm" ? 22  : 34;
+  const w  = size === "lg" ? 88  : size === "sm" ? 44  : 70;
+  const h  = size === "lg" ? 124 : size === "sm" ? 62  : 98;
+  const fs = size === "lg" ? 34  : size === "sm" ? 16  : 25;
+  const cs = size === "lg" ? 40  : size === "sm" ? 18  : 30;
 
   if (hidden) return (
     <div style={{
-      width: w, height: h, borderRadius: 10, flexShrink: 0,
+      width: w, height: h, borderRadius: 8, flexShrink: 0,
       background: "linear-gradient(135deg,#1a1040,#2d1b69,#1a1040)",
       border: "2px solid #5a3fa0",
       display: "flex", alignItems: "center", justifyContent: "center",
@@ -86,7 +95,7 @@ function Card({ card, hidden, size, winner }) {
 
   return (
     <div style={{
-      width: w, height: h, borderRadius: 10, flexShrink: 0,
+      width: w, height: h, borderRadius: 8, flexShrink: 0,
       background: bg, border: `2px solid ${bc}`,
       display: "flex", flexDirection: "column", alignItems: "stretch",
       boxShadow: winner ? `0 0 28px ${glow},0 4px 16px #0006` : "0 4px 16px #0005",
@@ -95,11 +104,11 @@ function Card({ card, hidden, size, winner }) {
       position: "relative", overflow: "hidden",
     }}>
       {isJ && <>
-        <div style={{ position: "absolute", top: 4, left: 6, lineHeight: 1.1 }}>
+        <div style={{ position: "absolute", top: 3, left: 5, lineHeight: 1.1 }}>
           <div style={{ fontSize: fs * 0.44, fontWeight: 900, color: "#cc4400", fontFamily: "Georgia,serif" }}>J</div>
           <div style={{ fontSize: fs * 0.3, color: "#cc4400", textAlign: "center" }}>★</div>
         </div>
-        <div style={{ position: "absolute", bottom: 4, right: 6, lineHeight: 1.1, transform: "rotate(180deg)" }}>
+        <div style={{ position: "absolute", bottom: 3, right: 5, lineHeight: 1.1, transform: "rotate(180deg)" }}>
           <div style={{ fontSize: fs * 0.44, fontWeight: 900, color: "#cc4400", fontFamily: "Georgia,serif" }}>J</div>
           <div style={{ fontSize: fs * 0.3, color: "#cc4400", textAlign: "center" }}>★</div>
         </div>
@@ -129,13 +138,12 @@ function Card({ card, hidden, size, winner }) {
           </svg>
         </div>
       </>}
-
       {isA && <>
-        <div style={{ position: "absolute", top: 4, left: 6, lineHeight: 1.1 }}>
+        <div style={{ position: "absolute", top: 3, left: 5, lineHeight: 1.1 }}>
           <div style={{ fontSize: fs * 0.46, fontWeight: 900, color: tc, fontFamily: "Georgia,serif" }}>A</div>
           <div style={{ fontSize: fs * 0.36, color: tc, textAlign: "center" }}>♥</div>
         </div>
-        <div style={{ position: "absolute", bottom: 4, right: 6, lineHeight: 1.1, transform: "rotate(180deg)" }}>
+        <div style={{ position: "absolute", bottom: 3, right: 5, lineHeight: 1.1, transform: "rotate(180deg)" }}>
           <div style={{ fontSize: fs * 0.46, fontWeight: 900, color: tc, fontFamily: "Georgia,serif" }}>A</div>
           <div style={{ fontSize: fs * 0.36, color: tc, textAlign: "center" }}>♥</div>
         </div>
@@ -143,13 +151,12 @@ function Card({ card, hidden, size, winner }) {
           <span style={{ fontSize: cs * 1.15, color: tc, fontFamily: "serif", lineHeight: 1 }}>♥</span>
         </div>
       </>}
-
       {isK && <>
-        <div style={{ position: "absolute", top: 4, left: 6, lineHeight: 1.1 }}>
+        <div style={{ position: "absolute", top: 3, left: 5, lineHeight: 1.1 }}>
           <div style={{ fontSize: fs * 0.46, fontWeight: 900, color: tc, fontFamily: "Georgia,serif" }}>K</div>
           <div style={{ fontSize: fs * 0.36, color: tc, textAlign: "center" }}>♠</div>
         </div>
-        <div style={{ position: "absolute", bottom: 4, right: 6, lineHeight: 1.1, transform: "rotate(180deg)" }}>
+        <div style={{ position: "absolute", bottom: 3, right: 5, lineHeight: 1.1, transform: "rotate(180deg)" }}>
           <div style={{ fontSize: fs * 0.46, fontWeight: 900, color: tc, fontFamily: "Georgia,serif" }}>K</div>
           <div style={{ fontSize: fs * 0.36, color: tc, textAlign: "center" }}>♠</div>
         </div>
@@ -191,16 +198,16 @@ function Chips({ label, val, gold, diff }) {
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "7px 12px", borderRadius: 9, minWidth: 72,
+      padding: "5px 10px", borderRadius: 9, minWidth: 66,
       background: gold ? "rgba(201,168,76,.14)" : "rgba(255,255,255,.05)",
       border: `1px solid ${gold ? "rgba(201,168,76,.4)" : "rgba(255,255,255,.1)"}`,
     }}>
-      <div style={{ fontSize: 10, color: "#9080b8", letterSpacing: 1, marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: gold ? "#ffe08a" : "#ddd0f0", fontFamily: "monospace" }}>
+      <div style={{ fontSize: 9, color: "#9080b8", letterSpacing: 1, marginBottom: 1 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: gold ? "#ffe08a" : "#ddd0f0", fontFamily: "monospace" }}>
         {(val ?? 0).toLocaleString()}
       </div>
       {diff !== undefined && diff !== 0 && (
-        <div style={{ fontSize: 11, fontWeight: 700, color: diff > 0 ? "#7dde8a" : "#ff7878", fontFamily: "monospace", marginTop: 1, animation: "pop .4s ease" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: diff > 0 ? "#7dde8a" : "#ff7878", fontFamily: "monospace", animation: "pop .4s ease" }}>
           {diff > 0 ? `+${diff}` : `${diff}`}
         </div>
       )}
@@ -213,13 +220,13 @@ function Log({ entries }) {
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [entries]);
   return (
     <div ref={ref} style={{
-      height: 86, overflowY: "auto", padding: "7px 11px",
-      background: "rgba(0,0,0,.3)", borderRadius: 9,
+      height: 72, overflowY: "auto", padding: "6px 10px",
+      background: "rgba(0,0,0,.3)", borderRadius: 8,
       border: "1px solid rgba(255,255,255,.07)",
     }}>
       {entries.map((e, i) => (
         <div key={i} style={{
-          fontSize: 12, lineHeight: 1.6,
+          fontSize: 11, lineHeight: 1.5,
           color: e.t === "w" ? "#7dde8a" : e.t === "l" ? "#ff7878" : e.t === "i" ? "#ffe08a" : "#b8a8d0",
         }}>{e.msg}</div>
       ))}
@@ -230,10 +237,10 @@ function Log({ entries }) {
 const S = {
   root:  { minHeight: "100vh", background: "#080514", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden", fontFamily: "sans-serif" },
   bg:    { position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 25%,#180d38,#080514 68%)" },
-  center:{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 },
-  play:  { position: "relative", zIndex: 1, width: "100%", maxWidth: 400, padding: "18px 14px", boxSizing: "border-box" },
-  area:  { display: "flex", flexDirection: "column", alignItems: "center", padding: 12, borderRadius: 12, marginBottom: 4, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" },
-  aLabel:{ fontSize: 10, color: "#7060a0", letterSpacing: 1, marginBottom: 8 },
+  center:{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 20 },
+  play:  { position: "relative", zIndex: 1, width: "100%", maxWidth: 400, padding: "12px 14px", boxSizing: "border-box" },
+  area:  { display: "flex", flexDirection: "column", alignItems: "center", padding: 8, borderRadius: 10, marginBottom: 4, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" },
+  aLabel:{ fontSize: 9, color: "#7060a0", letterSpacing: 1, marginBottom: 5 },
   inputGroup: { display: "flex", flexDirection: "column", gap: 5 },
   label: { fontSize: 11, color: "#9080b8", letterSpacing: 1 },
   input: { background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.15)", borderRadius: 8, padding: "10px 12px", color: "#e8dff0", fontSize: 15, outline: "none" },
@@ -244,10 +251,11 @@ const S = {
 };
 
 // ══════════════════════════════════════════════
-// AI対戦コンポーネント
+// AI対戦
 // ══════════════════════════════════════════════
 function AIGame({ onBack }) {
-  const [pChips, setPChips]   = useState(INIT_CHIPS);
+  const profile = loadProfile();
+  const [pChips, setPChips]   = useState(profile?.chips && profile.chips > 0 ? profile.chips : INIT_CHIPS);
   const [aChips, setAChips]   = useState(INIT_CHIPS);
   const [pot, setPot]         = useState(0);
   const [pCard, setPCard]     = useState(null);
@@ -264,8 +272,9 @@ function AIGame({ onBack }) {
   const [playerFirst, setPlayerFirst] = useState(true);
   const [isGameOver, setIsGameOver]   = useState(false);
   const [overMsg, setOverMsg]         = useState("");
-  const [roundStartChips, setRoundStartChips] = useState(INIT_CHIPS);
+  const [roundStartChips, setRoundStartChips] = useState(pChips);
   const [chipDiff, setChipDiff]       = useState(0);
+  const [playerName]                  = useState(profile?.name || "あなた");
 
   const stateRef = useRef({});
   useEffect(() => {
@@ -276,38 +285,55 @@ function AIGame({ onBack }) {
     setLog(prev => [...prev.slice(-40), { msg, t }]);
   }
 
+  const [started, setStarted] = useState(false);
+  useEffect(() => { if (!started) { setStarted(true); startGame(); } }, []);
+
   function startGame() {
-    setPChips(INIT_CHIPS); setAChips(INIT_CHIPS);
+    const pc = profile?.chips && profile.chips > 0 ? profile.chips : INIT_CHIPS;
+    setPChips(pc); setAChips(INIT_CHIPS);
     setLog([]); setRnd(1); setChipDiff(0);
     const first = Math.random() < 0.5;
     setPlayerFirst(first);
-    dealRound(INIT_CHIPS, INIT_CHIPS, 1, first);
+    dealRound(pc, INIT_CHIPS, 1, first);
   }
-
-  const [started, setStarted] = useState(false);
-  useEffect(() => { if (!started) { setStarted(true); startGame(); } }, []);
 
   function dealRound(pc, ac, r, first) {
     const [c0, c1, c2] = shuffle(DECK);
     const pAnte = Math.min(ANTE, pc);
     const aAnte = Math.min(ANTE, ac);
     const newPot = pAnte + aAnte;
+    const newPC = pc - pAnte;
+    const newAC = ac - aAnte;
     setPCard(c0); setACard(c1); setHCard(c2);
-    setPChips(pc - pAnte); setAChips(ac - aAnte);
+    setPChips(newPC); setAChips(newAC);
     setPot(newPot); setToCall(0);
     setShowAI(false); setResult(null); setStage("bet");
     setBusy(false); setIsGameOver(false); setChipDiff(0);
     setRoundStartChips(pc);
-    addLog(`── ラウンド ${r} ── 先攻: ${first ? "あなた" : "AI"}`, "i");
+
+    // どちらかがオールインなら即ショーダウン
+    if (newPC <= 0 || newAC <= 0) {
+      addLog(`── ラウンド ${r} ── 先攻: ${first ? playerName : "AI"}`, "i");
+      addLog(`アンティ各${pAnte}。ポット:${newPot} / オールイン→即ショーダウン`, "i");
+      setTimeout(() => {
+        const pw = c0.rank > c1.rank;
+        addLog(`【ショーダウン】${c0.name} vs ${c1.name} → ${pw ? playerName + "の勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
+        setShowAI(true);
+        endRound(pw ? "p" : "a", newPot, newPC, newAC, c0, c1, pc);
+      }, 800);
+      return;
+    }
+
+    addLog(`── ラウンド ${r} ── 先攻: ${first ? playerName : "AI"}`, "i");
     addLog(`アンティ各${pAnte}。ポット:${newPot}`);
+
     if (!first) {
       setBusy(true);
       setTimeout(() => {
-        const pcR = pc - pAnte, acR = ac - aAnte;
-        const d = aiAction(c1, newPot, 0, acR, 1);
+        const d = aiAction(c1, newPot, 0, newAC, 1);
         if (d.type === "raise") {
-          const r2 = Math.min(Math.max(d.amt, 10), acR, pcR);
-          if (r2 > 0) { setAChips(acR - r2); setPot(newPot + r2); setToCall(r2); addLog(`AI: ベット(+${r2})！どうする？`, "i"); }
+          const r2 = Math.min(Math.max(d.amt, 10), newAC, newPC);
+          if (r2 > 0) { setAChips(newAC - r2); setPot(newPot + r2); setToCall(r2); addLog(`AI: ベット(+${r2})！どうする？`, "i"); }
           else addLog("AI: チェック");
         } else addLog("AI: チェック");
         setBusy(false);
@@ -315,15 +341,15 @@ function AIGame({ onBack }) {
     }
   }
 
-  function endRound(winner, finalPot, pc, ac) {
+  function endRound(winner, finalPot, pc, ac, pcd, acd, startChips) {
     let newPC = pc, newAC = ac;
     if (winner === "p") { newPC = pc + finalPot; setPChips(newPC); }
     else                { newAC = ac + finalPot; setAChips(newAC); }
     setResult(winner); setShowAI(true); setStage("result"); setBusy(false);
-    const start = stateRef.current.roundStartChips;
-    const diff = newPC - start;
+    const diff = newPC - (startChips ?? roundStartChips);
     setChipDiff(diff);
-    addLog(`収支: ${diff >= 0 ? "+" : ""}${diff}（${start} → ${newPC}）`, diff >= 0 ? "w" : "l");
+    addLog(`収支: ${diff >= 0 ? "+" : ""}${diff}`, diff >= 0 ? "w" : "l");
+    saveProfile(playerName, newPC);
     if (newPC <= 0) { setOverMsg("チップが尽きた…"); setIsGameOver(true); }
     else if (newAC <= 0) { setOverMsg(`AIを破産させた！最終チップ: ${newPC}`); setIsGameOver(true); }
   }
@@ -332,12 +358,12 @@ function AIGame({ onBack }) {
     setBusy(true);
     setTimeout(() => {
       const d = aiAction(aCardObj, currentPot, callAmt, ach, round);
-      if (d.type === "fold") { addLog("AIがフォールド → あなたの勝ち！", "w"); endRound("p", currentPot, pch, ach); return; }
+      if (d.type === "fold") { addLog("AIがフォールド → " + playerName + "の勝ち！", "w"); endRound("p", currentPot, pch, ach); return; }
       if (d.type === "check") {
         addLog("AI: チェック");
         setTimeout(() => {
           const pw = pCardObj.rank > aCardObj.rank;
-          addLog(`【ショーダウン】${pCardObj.name} vs ${aCardObj.name} → ${pw ? "あなたの勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
+          addLog(`【ショーダウン】${pCardObj.name} vs ${aCardObj.name} → ${pw ? playerName + "の勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
           endRound(pw ? "p" : "a", currentPot, pch, ach);
         }, 500);
         return;
@@ -347,7 +373,7 @@ function AIGame({ onBack }) {
         setAChips(ach - c); setPot(np); addLog(`AI: コール(+${c})`);
         setTimeout(() => {
           const pw = pCardObj.rank > aCardObj.rank;
-          addLog(`【ショーダウン】${pCardObj.name} vs ${aCardObj.name} → ${pw ? "あなたの勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
+          addLog(`【ショーダウン】${pCardObj.name} vs ${aCardObj.name} → ${pw ? playerName + "の勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
           endRound(pw ? "p" : "a", np, pch, ach - c);
         }, 500);
         return;
@@ -358,7 +384,7 @@ function AIGame({ onBack }) {
           addLog("AI: チェック");
           setTimeout(() => {
             const pw = pCardObj.rank > aCardObj.rank;
-            addLog(`【ショーダウン】${pCardObj.name} vs ${aCardObj.name} → ${pw ? "あなたの勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
+            addLog(`【ショーダウン】${pCardObj.name} vs ${aCardObj.name} → ${pw ? playerName + "の勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
             endRound(pw ? "p" : "a", currentPot, pch, ach);
           }, 500);
           return;
@@ -376,11 +402,11 @@ function AIGame({ onBack }) {
   }
   function actCheck() {
     const { pot: p, pChips: pc, aChips: ac, pCard: pcd, aCard: acd, playerFirst: pf } = stateRef.current;
-    addLog("あなた: チェック");
+    addLog(playerName + ": チェック");
     if (!pf) {
       setTimeout(() => {
         const pw = pcd.rank > acd.rank;
-        addLog(`【ショーダウン】${pcd.name} vs ${acd.name} → ${pw ? "あなたの勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
+        addLog(`【ショーダウン】${pcd.name} vs ${acd.name} → ${pw ? playerName + "の勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
         setShowAI(true); endRound(pw ? "p" : "a", p, pc, ac);
       }, 400);
     } else doAI(p, 0, 1, pcd, acd, pc, ac);
@@ -388,10 +414,10 @@ function AIGame({ onBack }) {
   function actCall() {
     const { pot: p, toCall: tc, pChips: pc, aChips: ac, pCard: pcd, aCard: acd } = stateRef.current;
     const c = Math.min(tc, pc); const np = p + c;
-    setPChips(pc - c); setPot(np); setToCall(0); addLog(`あなた: コール(+${c})`);
+    setPChips(pc - c); setPot(np); setToCall(0); addLog(playerName + `: コール(+${c})`);
     const pw = pcd.rank > acd.rank;
     setTimeout(() => {
-      addLog(`【ショーダウン】${pcd.name} vs ${acd.name} → ${pw ? "あなたの勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
+      addLog(`【ショーダウン】${pcd.name} vs ${acd.name} → ${pw ? playerName + "の勝ち！" : "AIの勝ち"}`, pw ? "w" : "l");
       setShowAI(true); endRound(pw ? "p" : "a", np, pc - c, ac);
     }, 600);
   }
@@ -399,13 +425,13 @@ function AIGame({ onBack }) {
     const { pot: p, pChips: pc, aChips: ac, pCard: pcd, aCard: acd } = stateRef.current;
     const r = Math.min(Math.max(slider, 10), Math.min(pc, ac));
     const np = p + r; setPChips(pc - r); setPot(np);
-    addLog(`あなた: ベット(+${r})`); doAI(np, r, 2, pcd, acd, pc - r, ac);
+    addLog(playerName + `: ベット(+${r})`); doAI(np, r, 2, pcd, acd, pc - r, ac);
   }
   function actReraise() {
     const { pot: p, pChips: pc, aChips: ac, toCall: tc, pCard: pcd, aCard: acd } = stateRef.current;
     const r = Math.min(Math.max(slider, (tc || 0) + 10), Math.min(pc, ac + (tc || 0)));
     const np = p + r; setPChips(pc - r); setPot(np); setToCall(0);
-    addLog(`あなた: リレイズ(+${r})`); doAI(np, r, 3, pcd, acd, pc - r, ac);
+    addLog(playerName + `: リレイズ(+${r})`); doAI(np, r, 3, pcd, acd, pc - r, ac);
   }
   function goNextRound() {
     const { pChips: pc, aChips: ac, playerFirst: pf } = stateRef.current;
@@ -421,7 +447,7 @@ function AIGame({ onBack }) {
 
   if (!pCard || !aCard) return (
     <div style={S.root}><div style={S.bg}/>
-      <div style={{ color: "#ffe08a", position: "relative", zIndex: 1, margin: "auto", marginTop: "40vh", textAlign: "center" }}>読み込み中…</div>
+      <div style={{ color: "#ffe08a", position: "relative", zIndex: 1, margin: "auto", marginTop: "40vh" }}>読み込み中…</div>
     </div>
   );
 
@@ -429,83 +455,91 @@ function AIGame({ onBack }) {
     <div style={S.root}>
       <div style={S.bg}/>
       <div style={S.play}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <span style={{ fontFamily: "Georgia,serif", color: "#ffe08a", fontSize: 22, letterSpacing: 5 }}>JAK</span>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <span style={{ color: "#6050a0", fontSize: 11 }}>ROUND {rnd} | <span style={{ color: playerFirst ? "#c9a84c" : "#a080d0" }}>{playerFirst ? "あなた先攻" : "AI先攻"}</span></span>
-            <button style={{ ...S.ghost, padding: "4px 10px", fontSize: 11 }} onClick={onBack}>← 戻る</button>
+        {/* ヘッダー */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span style={{ fontFamily: "Georgia,serif", color: "#ffe08a", fontSize: 20, letterSpacing: 3 }}>J.A.K.</span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ color: "#6050a0", fontSize: 10 }}>R{rnd} | <span style={{ color: playerFirst ? "#c9a84c" : "#a080d0" }}>{playerFirst ? "あなた先攻" : "AI先攻"}</span></span>
+            <button style={{ ...S.ghost, padding: "3px 8px", fontSize: 10 }} onClick={onBack}>← 戻る</button>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 6, marginBottom: 12 }}>
-          <Chips label="あなた" val={pChips} gold diff={isResult ? chipDiff : undefined} />
+
+        {/* チップ */}
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 5, marginBottom: 8 }}>
+          <Chips label={playerName} val={pChips} gold diff={isResult ? chipDiff : undefined} />
           <Chips label="POT" val={pot} />
           <Chips label="AI" val={aChips} />
         </div>
-        <div style={S.area}>
-          <div style={S.aLabel}>AI</div>
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+
+        {/* AI・HIDDEN・プレイヤーカードを横並びに */}
+        <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 8, padding: "8px", background: "rgba(255,255,255,.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,.06)" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={S.aLabel}>AI</div>
             <Card card={aCard} hidden={!showAI} size="lg" winner={aWin} />
-            {isResult && <div style={{ fontSize: 20, fontWeight: 700, color: aWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{aWin ? "WIN" : "LOSE"}</div>}
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: aWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{aWin ? "WIN" : "LOSE"}</div>}
           </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0" }}>
-          <div style={{ fontSize: 9, color: "#5040a0", letterSpacing: 2, marginBottom: 5 }}>HIDDEN</div>
-          <Card card={hCard} hidden={!isResult} size="sm" />
-          {isResult && <div style={{ fontSize: 10, color: "#8070a0", marginTop: 3 }}>{hCard?.name}</div>}
-        </div>
-        <div style={S.area}>
-          <div style={S.aLabel}>あなた</div>
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ fontSize: 8, color: "#5040a0", letterSpacing: 1 }}>HIDDEN</div>
+            <Card card={hCard} hidden={!isResult} size="sm" />
+            {isResult && <div style={{ fontSize: 9, color: "#8070a0" }}>{hCard?.name}</div>}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={S.aLabel}>{playerName}</div>
             <Card card={pCard} size="lg" winner={pWin} />
-            {isResult && <div style={{ fontSize: 20, fontWeight: 700, color: pWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{pWin ? "WIN" : "LOSE"}</div>}
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: pWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{pWin ? "WIN" : "LOSE"}</div>}
           </div>
         </div>
-        <div style={{ margin: "10px 0" }}><Log entries={log} /></div>
-        {busy && <div style={{ textAlign: "center", color: "#c9a84c", fontSize: 12, padding: "4px 0", animation: "pulse .7s infinite alternate" }}>AIが考え中…</div>}
+
+        {/* ログ */}
+        <div style={{ marginBottom: 8 }}><Log entries={log} /></div>
+
+        {busy && <div style={{ textAlign: "center", color: "#c9a84c", fontSize: 11, padding: "3px 0", animation: "pulse .7s infinite alternate" }}>AIが考え中…</div>}
+
         {canAct && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {needCall ? (
               <>
-                <div style={{ textAlign: "center", color: "#ffe08a", fontSize: 12 }}>コール額: {toCall}</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ ...S.red, flex: 1 }} onClick={actFold}>フォールド</button>
-                  <button style={{ ...S.blue, flex: 1 }} onClick={actCall}>コール</button>
+                <div style={{ textAlign: "center", color: "#ffe08a", fontSize: 11 }}>コール額: {toCall}</div>
+                <div style={{ display: "flex", gap: 7 }}>
+                  <button style={{ ...S.red, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actFold}>フォールド</button>
+                  <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actCall}>コール</button>
                 </div>
                 {toCall < pChips && aChips > 0 && (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                     <input type="range" min={Math.max(toCall + 10, 20)} max={Math.max(Math.min(pChips, aChips + toCall, 600), Math.max(toCall + 10, 20))} step={10}
                       value={Math.min(slider, Math.max(Math.min(pChips, aChips + toCall), Math.max(toCall + 10, 20)))}
                       onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
-                    <span style={{ color: "#ffe08a", fontSize: 12, minWidth: 36 }}>{Math.min(slider, pChips, aChips + toCall)}</span>
-                    <button style={{ ...S.gold, padding: "8px 10px", fontSize: 12 }} onClick={actReraise}>リレイズ</button>
+                    <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, pChips, aChips + toCall)}</span>
+                    <button style={{ ...S.gold, padding: "7px 9px", fontSize: 11 }} onClick={actReraise}>リレイズ</button>
                   </div>
                 )}
               </>
             ) : (
               <>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ ...S.red, flex: 1 }} onClick={actFold}>フォールド</button>
-                  <button style={{ ...S.blue, flex: 1 }} onClick={actCheck}>チェック</button>
+                <div style={{ display: "flex", gap: 7 }}>
+                  <button style={{ ...S.red, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actFold}>フォールド</button>
+                  <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actCheck}>チェック</button>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                   <input type="range" min={10} max={Math.max(Math.min(pChips, aChips, 600), 10)} step={10}
                     value={Math.min(slider, Math.max(Math.min(pChips, aChips), 10))}
                     onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c", opacity: pChips <= 0 ? 0.3 : 1 }} disabled={pChips <= 0} />
-                  <span style={{ color: "#ffe08a", fontSize: 12, minWidth: 36 }}>{Math.min(slider, pChips, aChips)}</span>
-                  <button style={{ ...S.gold, padding: "8px 10px", fontSize: 12, opacity: pChips <= 0 ? 0.4 : 1 }} onClick={actBet} disabled={pChips <= 0}>ベット</button>
+                  <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, pChips, aChips)}</span>
+                  <button style={{ ...S.gold, padding: "7px 9px", fontSize: 11, opacity: pChips <= 0 ? 0.4 : 1 }} onClick={actBet} disabled={pChips <= 0}>ベット</button>
                 </div>
               </>
             )}
           </div>
         )}
-        {isResult && !isGameOver && <button style={{ ...S.gold, width: "100%", marginTop: 10 }} onClick={goNextRound}>次のラウンドへ →</button>}
+
+        {isResult && !isGameOver && <button style={{ ...S.gold, width: "100%", marginTop: 8, padding: "10px", fontSize: 13 }} onClick={goNextRound}>次のラウンドへ →</button>}
         {isResult && isGameOver && (
-          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, color: overMsg.includes("破産") ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ textAlign: "center", fontSize: 18, fontWeight: 700, color: overMsg.includes("破産") ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>
               {overMsg.includes("破産") ? "🏆 完全勝利！" : "💀 ゲームオーバー"}
             </div>
-            <div style={{ textAlign: "center", color: "#9080b0", fontSize: 12 }}>{overMsg}</div>
-            <button style={{ ...S.gold, width: "100%" }} onClick={startGame}>もう一度プレイ</button>
+            <div style={{ textAlign: "center", color: "#9080b0", fontSize: 11 }}>{overMsg}</div>
+            <button style={{ ...S.gold, width: "100%", padding: "10px" }} onClick={startGame}>もう一度プレイ</button>
             <button style={{ ...S.ghost, width: "100%" }} onClick={onBack}>タイトルへ</button>
           </div>
         )}
@@ -520,25 +554,63 @@ function AIGame({ onBack }) {
 }
 
 // ══════════════════════════════════════════════
-// オンライン対戦コンポーネント
+// オンライン対戦
 // ══════════════════════════════════════════════
 function OnlineGame({ onBack }) {
+  const profile = loadProfile();
   const [screen, setScreen] = useState("lobby");
-  const [roomId, setRoomId] = useState("");
+  const [roomId,   setRoomId]   = useState("");
   const [inputId,  setInputId]  = useState("");
   const [myRole,   setMyRole]   = useState("");
   const [myName,   setMyName]   = useState("");
-  const [nameInput,setNameInput]= useState("");
+  const [nameInput,setNameInput]= useState(profile?.name || "");
   const [error,    setError]    = useState("");
   const [gs, setGs] = useState(null);
   const [log, setLog]    = useState([]);
   const [slider, setSlider] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(20);
 
   const roomRef   = useRef(null);
   const unsubRef  = useRef(null);
   const stRef     = useRef({});
+  const timerRef  = useRef(null);
 
   useEffect(() => { stRef.current = { gs, myRole, roomId }; }, [gs, myRole, roomId]);
+
+  // タイマー（全return文より前）
+  useEffect(() => {
+    if (!gs || gs.phase !== "playing" || gs.result) {
+      clearInterval(timerRef.current);
+      return;
+    }
+    const acting = gs.turn === myRole;
+    if (acting) {
+      setTimeLeft(20);
+      let t = 20;
+      timerRef.current = setInterval(() => {
+        t -= 1;
+        setTimeLeft(t);
+        if (t <= 0) {
+          clearInterval(timerRef.current);
+          const { gs: g, myRole: role, roomId: rid } = stRef.current;
+          if (!g || !rid || g.result) return;
+          const opC = role === "host" ? g.guest?.chips ?? 0 : g.host?.chips ?? 0;
+          const meName = role === "host" ? g.host?.name : g.guest?.name;
+          const winner = role === "host" ? "guest" : "host";
+          const seq = Date.now();
+          const updates = {};
+          updates[`rooms/${rid}/result`] = winner;
+          updates[`rooms/${rid}/showCards`] = true;
+          updates[`rooms/${rid}/lastAction`] = { msg: `${meName}が時間切れ → フォールド`, t: "i", seq };
+          updates[`rooms/${rid}/${winner}/chips`] = opC + (g.pot ?? 0);
+          update(ref(db), updates);
+        }
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [gs?.turn, gs?.result, gs?.phase, myRole]);
 
   function addLog(msg, t = "n") { setLog(prev => [...prev.slice(-40), { msg, t }]); }
 
@@ -564,6 +636,7 @@ function OnlineGame({ onBack }) {
     if (!nameInput.trim()) { setError("名前を入力してや"); return; }
     const rid = genRoomId(); const name = nameInput.trim();
     setMyName(name); setMyRole("host"); setRoomId(rid); setError("");
+    saveProfile(name, profile?.chips || INIT_CHIPS);
     await set(ref(db, `rooms/${rid}`), { phase: "waiting", host: { name, chips: INIT_CHIPS }, guest: null, round: 0 });
     subscribeRoom(rid); setScreen("wait");
   }
@@ -576,16 +649,61 @@ function OnlineGame({ onBack }) {
     if (!snap.exists()) { setError("ルームが見つからへん"); return; }
     if (snap.val().phase !== "waiting") { setError("そのルームはもう始まってるで"); return; }
     setMyName(name); setMyRole("guest"); setRoomId(rid); setError("");
+    saveProfile(name, profile?.chips || INIT_CHIPS);
     await update(ref(db, `rooms/${rid}`), { guest: { name, chips: INIT_CHIPS } });
     subscribeRoom(rid);
     await dealNewRound(rid, INIT_CHIPS, INIT_CHIPS, 1, snap.val().host.name, name, null);
     setScreen("game");
   }
 
+  async function quickMatch() {
+    if (!nameInput.trim()) { setError("名前を入力してや"); return; }
+    const name = nameInput.trim();
+    setMyName(name); setError("");
+    saveProfile(name, profile?.chips || INIT_CHIPS);
+    setScreen("matching");
+    const waitingRef = ref(db, "matching/waiting");
+    const snap = await get(waitingRef);
+    if (snap.exists()) {
+      const data = snap.val();
+      const rid = data.roomId; const hostName = data.name;
+      await remove(waitingRef);
+      setMyRole("guest"); setRoomId(rid);
+      const roomSnap = await get(ref(db, `rooms/${rid}`));
+      if (!roomSnap.exists()) { await registerAsWaiting(rid, name); return; }
+      await update(ref(db, `rooms/${rid}`), { guest: { name, chips: INIT_CHIPS } });
+      subscribeRoom(rid);
+      await dealNewRound(rid, INIT_CHIPS, INIT_CHIPS, 1, hostName, name, null);
+      setScreen("game");
+    } else {
+      const rid = genRoomId(); setRoomId(rid);
+      await registerAsWaiting(rid, name);
+    }
+  }
+
+  async function registerAsWaiting(rid, name) {
+    await set(ref(db, `rooms/${rid}`), { phase: "waiting", host: { name, chips: INIT_CHIPS }, guest: null, round: 0 });
+    await set(ref(db, "matching/waiting"), { roomId: rid, name, ts: Date.now() });
+    setMyRole("host"); subscribeRoom(rid);
+    const matchRef = ref(db, `rooms/${rid}/guest`);
+    const unsub = onValue(matchRef, async (snap) => {
+      if (snap.exists() && snap.val() !== null) {
+        off(matchRef, "value", unsub);
+        await remove(ref(db, "matching/waiting"));
+      }
+    });
+  }
+
+  async function cancelMatching() {
+    await remove(ref(db, "matching/waiting"));
+    if (roomId) await remove(ref(db, `rooms/${roomId}`));
+    if (unsubRef.current) unsubRef.current();
+    setScreen("lobby"); setRoomId("");
+  }
+
   async function dealNewRound(rid, hostChips, guestChips, rnd, hName, gName, prevFirst) {
     const [c0, c1, c2] = shuffle(DECK);
     const newPot = ANTE * 2; const seq = Date.now();
-    // 1ラウンド目はランダム、以降は交互
     const firstPlayer = rnd === 1 ? (Math.random() < 0.5 ? "host" : "guest") : (prevFirst === "host" ? "guest" : "host");
     await set(ref(db, `rooms/${rid}`), {
       phase: "playing", round: rnd,
@@ -594,7 +712,7 @@ function OnlineGame({ onBack }) {
       hidden: c2.id, pot: newPot, toCall: 0, betRound: 1,
       turn: firstPlayer, firstPlayer,
       showCards: false, result: null,
-      lastAction: { msg: `── ラウンド ${rnd} ── アンティ各${ANTE} ポット:${newPot} 先攻:${firstPlayer === "host" ? hName : gName}`, t: "i", seq },
+      lastAction: { msg: `── ラウンド ${rnd} ── 先攻:${firstPlayer === "host" ? hName : gName} ポット:${newPot}`, t: "i", seq },
     });
   }
 
@@ -631,7 +749,6 @@ function OnlineGame({ onBack }) {
       await update(ref(db), updates); return;
     }
     if (type === "check") {
-      // 先攻がチェック→相手のターンへ、後攻がチェック→ショーダウン
       const iAmFirst = g.firstPlayer === role;
       if (!iAmFirst || g.betRound > 1) {
         await doShowdown(rid, g, myCardObj, opCardObj, role, meName, seq);
@@ -690,89 +807,23 @@ function OnlineGame({ onBack }) {
     await dealNewRound(rid, hc, gc, g.round + 1, g.host.name, g.guest.name, g.firstPlayer);
   }
 
-  // マッチング機能
-  async function quickMatch() {
-    if (!nameInput.trim()) { setError("名前を入力してや"); return; }
-    const name = nameInput.trim();
-    setMyName(name); setError("");
-    setScreen("matching");
-
-    // 待機中のルームを探す
-    const waitingRef = ref(db, "matching/waiting");
-    const snap = await get(waitingRef);
-
-    if (snap.exists()) {
-      // 待ってる人がいた→参加する
-      const data = snap.val();
-      const rid = data.roomId;
-      const hostName = data.name;
-
-      // 待機リストから削除
-      await remove(waitingRef);
-
-      setMyRole("guest"); setRoomId(rid);
-      const roomSnap = await get(ref(db, `rooms/${rid}`));
-      if (!roomSnap.exists()) {
-        // ルームが消えてた→自分がホストになる
-        await registerAsWaiting(rid, name);
-        return;
-      }
-      await update(ref(db, `rooms/${rid}`), { guest: { name, chips: INIT_CHIPS } });
-      subscribeRoom(rid);
-      await dealNewRound(rid, INIT_CHIPS, INIT_CHIPS, 1, hostName, name);
-      setScreen("game");
-    } else {
-      // 待ってる人いない→自分が待つ
-      const rid = genRoomId();
-      setRoomId(rid);
-      await registerAsWaiting(rid, name);
-    }
-  }
-
-  async function registerAsWaiting(rid, name) {
-    await set(ref(db, `rooms/${rid}`), { phase: "waiting", host: { name, chips: INIT_CHIPS }, guest: null, round: 0 });
-    await set(ref(db, "matching/waiting"), { roomId: rid, name, ts: Date.now() });
-    setMyRole("host");
-    subscribeRoom(rid);
-    // マッチングを監視
-    const matchRef = ref(db, `rooms/${rid}/guest`);
-    const unsub = onValue(matchRef, async (snap) => {
-      if (snap.exists() && snap.val() !== null) {
-        off(matchRef, "value", unsub);
-        await remove(ref(db, "matching/waiting"));
-      }
-    });
-  }
-
-  async function cancelMatching() {
-    await remove(ref(db, "matching/waiting"));
-    if (roomId) await remove(ref(db, `rooms/${roomId}`));
-    if (unsubRef.current) unsubRef.current();
-    setScreen("lobby"); setRoomId("");
-  }
-
-  // マッチング待機画面
+  // マッチング待機
   if (screen === "matching") return (
-    <div style={S.root}>
-      <div style={S.bg}/>
+    <div style={S.root}><div style={S.bg}/>
       <div style={S.center}>
-        <div style={{ fontSize: 22, fontFamily: "serif", color: "#ffe08a", marginBottom: 20 }}>対戦相手を探してるで…</div>
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ width: 60, height: 60, borderRadius: "50%", border: "3px solid #c9a84c", borderTopColor: "transparent", animation: "spin 1s linear infinite", margin: "0 auto" }}/>
-        </div>
-        <div style={{ color: "#7060a0", fontSize: 13, marginBottom: 24 }}>誰かが参加するのを待ってるで</div>
+        <div style={{ fontSize: 20, fontFamily: "serif", color: "#ffe08a", marginBottom: 20 }}>対戦相手を探してるで…</div>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", border: "3px solid #c9a84c", borderTopColor: "transparent", animation: "spin 1s linear infinite", margin: "0 auto 24px" }}/>
         <button style={S.ghost} onClick={cancelMatching}>キャンセル</button>
       </div>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  // ロビー画面
+  // ロビー
   if (screen === "lobby") return (
-    <div style={S.root}>
-      <div style={S.bg}/>
+    <div style={S.root}><div style={S.bg}/>
       <div style={S.center}>
-        <div style={{ fontSize: 28, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 6, marginBottom: 28 }}>JAK</div>
+        <div style={{ fontSize: 26, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 6, marginBottom: 24 }}>J.A.K.</div>
         <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={S.inputGroup}>
             <label style={S.label}>あなたの名前</label>
@@ -787,29 +838,23 @@ function OnlineGame({ onBack }) {
           </div>
           <button style={{ ...S.blue, fontSize: 13 }} onClick={joinRoom}>ルームに参加</button>
           {error && <div style={{ color: "#ff7878", fontSize: 12, textAlign: "center" }}>{error}</div>}
-          <button style={{ ...S.ghost, marginTop: 8 }} onClick={onBack}>← 戻る</button>
+          <button style={{ ...S.ghost, marginTop: 4 }} onClick={onBack}>← 戻る</button>
         </div>
       </div>
     </div>
   );
 
-  // 待機画面
+  // 待機中
   if (screen === "wait") return (
-    <div style={S.root}>
-      <div style={S.bg}/>
+    <div style={S.root}><div style={S.bg}/>
       <div style={S.center}>
-        <div style={{ fontSize: 22, fontFamily: "serif", color: "#ffe08a", marginBottom: 20 }}>対戦相手を待ってるで…</div>
-        <div style={{ background: "rgba(201,168,76,.1)", border: "1px solid rgba(201,168,76,.3)", borderRadius: 12, padding: "18px 32px", textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 11, color: "#9080b8", letterSpacing: 2, marginBottom: 8 }}>ROOM ID</div>
-          <div style={{ fontSize: 38, fontFamily: "monospace", fontWeight: 700, color: "#ffe08a", letterSpacing: 6 }}>{roomId}</div>
-          <div style={{ fontSize: 11, color: "#7060a0", marginTop: 8 }}>友達にこのIDを教えてや</div>
+        <div style={{ fontSize: 20, fontFamily: "serif", color: "#ffe08a", marginBottom: 20 }}>対戦相手を待ってるで…</div>
+        <div style={{ background: "rgba(201,168,76,.1)", border: "1px solid rgba(201,168,76,.3)", borderRadius: 12, padding: "16px 28px", textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 10, color: "#9080b8", letterSpacing: 2, marginBottom: 6 }}>ROOM ID</div>
+          <div style={{ fontSize: 34, fontFamily: "monospace", fontWeight: 700, color: "#ffe08a", letterSpacing: 6 }}>{roomId}</div>
         </div>
-        <div style={{ color: "#6050a0", fontSize: 13, animation: "pulse .8s infinite alternate" }}>待機中…</div>
-        <button style={{ ...S.ghost, marginTop: 24 }} onClick={() => { if(unsubRef.current) unsubRef.current(); remove(ref(db,`rooms/${roomId}`)); setScreen("lobby"); }}>
-          キャンセル
-        </button>
+        <button style={{ ...S.ghost }} onClick={() => { if(unsubRef.current) unsubRef.current(); remove(ref(db,`rooms/${roomId}`)); setScreen("lobby"); }}>キャンセル</button>
       </div>
-      <style>{`@keyframes pulse{from{opacity:.4}to{opacity:1}}`}</style>
     </div>
   );
 
@@ -817,20 +862,18 @@ function OnlineGame({ onBack }) {
   if (screen === "over") {
     const iWon = gs?.result === myRole;
     return (
-      <div style={S.root}>
-        <div style={S.bg}/>
+      <div style={S.root}><div style={S.bg}/>
         <div style={S.center}>
-          <div style={{ fontSize: 50, marginBottom: 12 }}>{iWon ? "🏆" : "💀"}</div>
-          <div style={{ fontSize: 26, fontFamily: "serif", color: iWon ? "#7dde8a" : "#ff7878", marginBottom: 8 }}>{iWon ? "勝利！" : "敗北…"}</div>
-          <div style={{ color: "#9080b0", fontSize: 13, marginBottom: 30 }}>最終チップ: {myChips()}</div>
+          <div style={{ fontSize: 46, marginBottom: 10 }}>{iWon ? "🏆" : "💀"}</div>
+          <div style={{ fontSize: 22, fontFamily: "serif", color: iWon ? "#7dde8a" : "#ff7878", marginBottom: 6 }}>{iWon ? "勝利！" : "敗北…"}</div>
+          <div style={{ color: "#9080b0", fontSize: 12, marginBottom: 24 }}>最終チップ: {myChips()}</div>
           <button style={S.gold} onClick={() => { if(unsubRef.current) unsubRef.current(); onBack(); }}>タイトルへ</button>
         </div>
       </div>
     );
   }
 
-
-  if (!gs) return <div style={S.root}><div style={S.bg}/><div style={{ color: "#ffe08a", margin: "auto", marginTop: "40vh" }}>接続中…</div></div>;
+  if (!gs) return <div style={S.root}><div style={S.bg}/><div style={{ color: "#ffe08a", position: "relative", zIndex: 1, margin: "auto", marginTop: "40vh" }}>接続中…</div></div>;
 
   const isResult  = !!gs.result;
   const myTurn    = isMyTurn();
@@ -841,84 +884,98 @@ function OnlineGame({ onBack }) {
   const mc = myCard(); const oc = opCard(); const hc = hiddenCard();
 
   return (
-    <div style={S.root}>
-      <div style={S.bg}/>
+    <div style={S.root}><div style={S.bg}/>
       <div style={S.play}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <span style={{ fontFamily: "Georgia,serif", color: "#ffe08a", fontSize: 22, letterSpacing: 5 }}>JAK</span>
-          <span style={{ color: "#6050a0", fontSize: 11 }}>
-            ROUND {gs.round} | <span style={{ color: gs.firstPlayer === myRole ? "#c9a84c" : "#a080d0" }}>{gs.firstPlayer === myRole ? "あなた先攻" : "相手先攻"}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span style={{ fontFamily: "Georgia,serif", color: "#ffe08a", fontSize: 20, letterSpacing: 3 }}>J.A.K.</span>
+          <span style={{ color: "#6050a0", fontSize: 10 }}>
+            R{gs.round} | <span style={{ color: gs.firstPlayer === myRole ? "#c9a84c" : "#a080d0" }}>{gs.firstPlayer === myRole ? "あなた先攻" : "相手先攻"}</span>
           </span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 6, marginBottom: 12 }}>
+
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 5, marginBottom: 8 }}>
           <Chips label={myNameFromGs() || "あなた"} val={myChips()} gold />
           <Chips label="POT" val={gs.pot} />
           <Chips label={opNameFromGs() || "相手"} val={opChips()} />
         </div>
-        <div style={S.area}>
-          <div style={S.aLabel}>{opNameFromGs() || "相手"}{!isResult && gs.turn === opRole() ? " 🤔" : ""}</div>
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+
+        {/* カードを横並びに */}
+        <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 8, padding: "8px", background: "rgba(255,255,255,.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,.06)" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={S.aLabel}>{opNameFromGs() || "相手"}{!isResult && gs.turn === opRole() ? " 🤔" : ""}</div>
             <Card card={oc} hidden={!gs.showCards} size="lg" winner={opWin} />
-            {isResult && <div style={{ fontSize: 20, fontWeight: 700, color: opWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{opWin ? "WIN" : "LOSE"}</div>}
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: opWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{opWin ? "WIN" : "LOSE"}</div>}
           </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0" }}>
-          <div style={{ fontSize: 9, color: "#5040a0", letterSpacing: 2, marginBottom: 5 }}>HIDDEN</div>
-          <Card card={hc} hidden={!isResult} size="sm" />
-          {isResult && <div style={{ fontSize: 10, color: "#8070a0", marginTop: 3 }}>{hc?.name}</div>}
-        </div>
-        <div style={S.area}>
-          <div style={S.aLabel}>{myNameFromGs() || "あなた"}{!isResult && myTurn ? " ← あなたの番" : ""}</div>
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ fontSize: 8, color: "#5040a0", letterSpacing: 1 }}>HIDDEN</div>
+            <Card card={hc} hidden={!isResult} size="sm" />
+            {isResult && <div style={{ fontSize: 9, color: "#8070a0" }}>{hc?.name}</div>}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={S.aLabel}>{myNameFromGs() || "あなた"}{!isResult && myTurn ? " ←" : ""}</div>
             <Card card={mc} size="lg" winner={myWin} />
-            {isResult && <div style={{ fontSize: 20, fontWeight: 700, color: myWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{myWin ? "WIN" : "LOSE"}</div>}
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: myWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{myWin ? "WIN" : "LOSE"}</div>}
           </div>
         </div>
-        <div style={{ margin: "10px 0" }}><Log entries={log} /></div>
+
+        <div style={{ marginBottom: 6 }}><Log entries={log} /></div>
+
+        {/* タイマーバー */}
+        {canAct && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,.1)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(timeLeft / 20) * 100}%`, background: timeLeft <= 5 ? "#ff7878" : timeLeft <= 10 ? "#ffe08a" : "#7dde8a", transition: "width 1s linear, background .3s" }}/>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: timeLeft <= 5 ? "#ff7878" : "#ffe08a", minWidth: 26, fontFamily: "monospace" }}>{timeLeft}s</div>
+          </div>
+        )}
+
         {!myTurn && !isResult && (
-          <div style={{ textAlign: "center", color: "#c9a84c", fontSize: 12, padding: "6px 0", animation: "pulse .8s infinite alternate" }}>
+          <div style={{ textAlign: "center", color: "#c9a84c", fontSize: 11, padding: "4px 0", animation: "pulse .8s infinite alternate" }}>
             {opNameFromGs()}が考え中…
           </div>
         )}
+
         {canAct && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {needCall ? (
               <>
-                <div style={{ textAlign: "center", color: "#ffe08a", fontSize: 12 }}>コール額: {gs.toCall}</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ ...S.red, flex: 1 }} onClick={() => sendAction("fold")}>フォールド</button>
-                  <button style={{ ...S.blue, flex: 1 }} onClick={() => sendAction("call")}>コール</button>
+                <div style={{ textAlign: "center", color: "#ffe08a", fontSize: 11 }}>コール額: {gs.toCall}</div>
+                <div style={{ display: "flex", gap: 7 }}>
+                  <button style={{ ...S.red, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("fold")}>フォールド</button>
+                  <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("call")}>コール</button>
                 </div>
                 {gs.toCall < myChips() && opChips() > 0 && (
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                     <input type="range" min={Math.max((gs.toCall ?? 0) + 10, 20)} max={Math.max(Math.min(myChips(), opChips() + (gs.toCall ?? 0), 600), Math.max((gs.toCall ?? 0) + 10, 20))} step={10}
                       value={slider} onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
-                    <span style={{ color: "#ffe08a", fontSize: 12, minWidth: 36 }}>{slider}</span>
-                    <button style={{ ...S.gold, padding: "8px 10px", fontSize: 12 }} onClick={() => sendAction("raise", slider)}>リレイズ</button>
+                    <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{slider}</span>
+                    <button style={{ ...S.gold, padding: "7px 9px", fontSize: 11 }} onClick={() => sendAction("raise", slider)}>リレイズ</button>
                   </div>
                 )}
               </>
             ) : (
               <>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ ...S.red, flex: 1 }} onClick={() => sendAction("fold")}>フォールド</button>
-                  <button style={{ ...S.blue, flex: 1 }} onClick={() => sendAction("check")}>チェック</button>
+                <div style={{ display: "flex", gap: 7 }}>
+                  <button style={{ ...S.red, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("fold")}>フォールド</button>
+                  <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("check")}>チェック</button>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
                   <input type="range" min={10} max={Math.max(Math.min(myChips(), opChips(), 600), 10)} step={10}
                     value={slider} onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
-                  <span style={{ color: "#ffe08a", fontSize: 12, minWidth: 36 }}>{slider}</span>
-                  <button style={{ ...S.gold, padding: "8px 10px", fontSize: 12 }} onClick={() => sendAction("raise", slider)}>ベット</button>
+                  <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{slider}</span>
+                  <button style={{ ...S.gold, padding: "7px 9px", fontSize: 11 }} onClick={() => sendAction("raise", slider)}>ベット</button>
                 </div>
               </>
             )}
           </div>
         )}
+
         {isResult && myRole === "host" && (
-          <button style={{ ...S.gold, width: "100%", marginTop: 10 }} onClick={goNextRound}>次のラウンドへ →</button>
+          <button style={{ ...S.gold, width: "100%", marginTop: 8, padding: "10px", fontSize: 13 }} onClick={goNextRound}>次のラウンドへ →</button>
         )}
         {isResult && myRole === "guest" && (
-          <div style={{ textAlign: "center", color: "#7060a0", fontSize: 12, marginTop: 12 }}>ホストが次のラウンドを開始するのを待ってるで…</div>
+          <div style={{ textAlign: "center", color: "#7060a0", fontSize: 11, marginTop: 10 }}>ホストが次のラウンドを開始するのを待ってるで…</div>
         )}
       </div>
       <style>{`
@@ -931,10 +988,11 @@ function OnlineGame({ onBack }) {
 }
 
 // ══════════════════════════════════════════════
-// メインApp（タイトル画面）
+// タイトル画面
 // ══════════════════════════════════════════════
 export default function App() {
-  const [mode, setMode] = useState("title"); // title | ai | online
+  const [mode, setMode] = useState("title");
+  const profile = loadProfile();
 
   if (mode === "ai")     return <AIGame     onBack={() => setMode("title")} />;
   if (mode === "online") return <OnlineGame onBack={() => setMode("title")} />;
@@ -943,24 +1001,29 @@ export default function App() {
     <div style={S.root}>
       <div style={S.bg}/>
       <div style={S.center}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontSize: 68, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 10, textShadow: "0 0 40px rgba(255,224,138,.7),0 2px 0 #a07010" }}>JAK</div>
-          <div style={{ fontSize: 12, color: "#7060a0", letterSpacing: 5, marginTop: 4 }}>大中小カードゲーム</div>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 64, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 8, textShadow: "0 0 40px rgba(255,224,138,.7),0 2px 0 #a07010" }}>J.A.K.</div>
+          <div style={{ fontSize: 11, color: "#7060a0", letterSpacing: 4, marginTop: 2 }}>大中小カードゲーム</div>
         </div>
-        <div style={{ display: "flex", gap: 14, marginBottom: 28 }}>
+        {profile && (
+          <div style={{ fontSize: 12, color: "#c9a84c", marginBottom: 8 }}>
+            おかえり、{profile.name}！チップ: {profile.chips?.toLocaleString()}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
           {DECK.map((c, i) => (
             <div key={c.id} style={{ animation: `fc 1.8s ease-in-out ${i*0.3}s infinite alternate` }}>
               <Card card={c} size="md" winner />
             </div>
           ))}
         </div>
-        <div style={{ color: "#a090c0", fontSize: 13, textAlign: "center", lineHeight: 2.2, marginBottom: 28 }}>
+        <div style={{ color: "#a090c0", fontSize: 12, textAlign: "center", lineHeight: 2, marginBottom: 24 }}>
           <div>🃏 ジョーカー ＞ A エース ＞ K キング</div>
-          <div style={{ fontSize: 11, opacity: .6 }}>3枚・1枚は伏せ。心理戦で勝ち抜け。</div>
+          <div style={{ fontSize: 10, opacity: .6 }}>3枚・1枚は伏せ。心理戦で勝ち抜け。</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 280 }}>
           <button style={S.gold} onClick={() => setMode("ai")}>AI対戦</button>
-          <button style={{ ...S.blue, padding: "12px 22px", fontSize: 14, fontWeight: 700, letterSpacing: 1 }} onClick={() => setMode("online")}>オンライン対戦</button>
+          <button style={{ ...S.blue, padding: "12px 22px", fontSize: 14, fontWeight: 700 }} onClick={() => setMode("online")}>オンライン対戦</button>
         </div>
       </div>
       <style>{`@keyframes fc{from{transform:translateY(0)}to{transform:translateY(-10px)}}`}</style>
