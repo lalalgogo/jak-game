@@ -452,6 +452,11 @@ function AIGame({ onBack }) {
   const canAct   = stage === "bet" && !busy;
   const pWin = result === "p"; const aWin = result === "a";
 
+  // needCallになったらsliderをリセット
+  useEffect(() => {
+    if (needCall) setSlider(toCall + 10);
+  }, [needCall, toCall]);
+
   if (!pCard || !aCard) return (
     <div style={S.root}><div style={S.bg}/>
       <div style={{ color: "#ffe08a", position: "relative", zIndex: 1, margin: "auto", marginTop: "40vh" }}>読み込み中…</div>
@@ -900,6 +905,11 @@ function OnlineGame({ onBack }) {
   const myTurn    = isMyTurn();
   const needCall  = (gs.toCall ?? 0) > 0 && myTurn;
   const canAct    = myTurn && !isResult;
+
+  // needCallになったらsliderをリセット
+  useEffect(() => {
+    if (needCall) setSlider((gs?.toCall ?? 0) + 10);
+  }, [needCall, gs?.toCall]);
   const myWin     = gs.result === myRole;
   const opWin     = gs.result === opRole();
   const mc = myCard(); const oc = opCard(); const hc = hiddenCard();
