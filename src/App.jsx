@@ -280,7 +280,7 @@ function AIGame({ onBack }) {
   const [overMsg, setOverMsg]         = useState("");
   const [roundStartChips, setRoundStartChips] = useState(pChips);
   const [chipDiff, setChipDiff]       = useState(0);
-  const [playerName]                  = useState(profile?.name || "あなた");
+  const [playerName]                  = useState(loadProfile("ai")?.name || "あなた");
 
   const stateRef = useRef({});
   useEffect(() => {
@@ -1049,7 +1049,7 @@ export default function App() {
                 {nameInput}
               </div>
               <div style={{ fontSize: 10, color: "#9080b8", marginBottom: 8 }}>
-                AI: {(ai?.chips ?? INIT_CHIPS).toLocaleString()} | オンライン: {(online?.chips ?? INIT_CHIPS).toLocaleString()}
+                AI: {(ai?.chips >= INIT_CHIPS ? ai.chips : INIT_CHIPS).toLocaleString()} | オンライン: {(online?.chips ?? INIT_CHIPS).toLocaleString()}
               </div>
               <button style={{ ...S.ghost, fontSize: 11, padding: "4px 12px" }} onClick={() => setNameSet(false)}>名前を変更</button>
             </div>
