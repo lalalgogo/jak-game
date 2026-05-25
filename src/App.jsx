@@ -478,12 +478,12 @@ function AIGame({ onBack }) {
           <Chips label="AI" val={aChips} />
         </div>
 
-        {/* AI・HIDDEN・プレイヤーカードを横並びに */}
+        {/* カード横並び：左：あなた、中：HIDDEN、右：AI */}
         <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 8, padding: "8px", background: "rgba(255,255,255,.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,.06)" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={S.aLabel}>AI</div>
-            <Card card={aCard} hidden={!showAI} size="lg" winner={aWin} />
-            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: aWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{aWin ? "WIN" : "LOSE"}</div>}
+            <div style={S.aLabel}>{playerName}</div>
+            <Card card={pCard} size="lg" winner={pWin} />
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: pWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{pWin ? "WIN" : "LOSE"}</div>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{ fontSize: 8, color: "#5040a0", letterSpacing: 1 }}>HIDDEN</div>
@@ -491,9 +491,9 @@ function AIGame({ onBack }) {
             {isResult && <div style={{ fontSize: 9, color: "#8070a0" }}>{hCard?.name}</div>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={S.aLabel}>{playerName}</div>
-            <Card card={pCard} size="lg" winner={pWin} />
-            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: pWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{pWin ? "WIN" : "LOSE"}</div>}
+            <div style={S.aLabel}>AI</div>
+            <Card card={aCard} hidden={!showAI} size="lg" winner={aWin} />
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: aWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{aWin ? "WIN" : "LOSE"}</div>}
           </div>
         </div>
 
@@ -906,12 +906,12 @@ function OnlineGame({ onBack }) {
           <Chips label={opNameFromGs() || "相手"} val={opChips()} />
         </div>
 
-        {/* カードを横並びに */}
+        {/* カードを横並びに：左：自分、中：HIDDEN、右：相手 */}
         <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center", marginBottom: 8, padding: "8px", background: "rgba(255,255,255,.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,.06)" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={S.aLabel}>{opNameFromGs() || "相手"}{!isResult && gs.turn === opRole() ? " 🤔" : ""}</div>
-            <Card card={oc} hidden={!gs.showCards} size="lg" winner={opWin} />
-            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: opWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{opWin ? "WIN" : "LOSE"}</div>}
+            <div style={S.aLabel}>{myNameFromGs() || "あなた"}{!isResult && myTurn ? " ←" : ""}</div>
+            <Card card={mc} size="lg" winner={myWin} />
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: myWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{myWin ? "WIN" : "LOSE"}</div>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{ fontSize: 8, color: "#5040a0", letterSpacing: 1 }}>HIDDEN</div>
@@ -919,9 +919,9 @@ function OnlineGame({ onBack }) {
             {isResult && <div style={{ fontSize: 9, color: "#8070a0" }}>{hc?.name}</div>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={S.aLabel}>{myNameFromGs() || "あなた"}{!isResult && myTurn ? " ←" : ""}</div>
-            <Card card={mc} size="lg" winner={myWin} />
-            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: myWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{myWin ? "WIN" : "LOSE"}</div>}
+            <div style={S.aLabel}>{opNameFromGs() || "相手"}{!isResult && gs.turn === opRole() ? " 🤔" : ""}</div>
+            <Card card={oc} hidden={!gs.showCards} size="lg" winner={opWin} />
+            {isResult && <div style={{ fontSize: 14, fontWeight: 700, color: opWin ? "#7dde8a" : "#ff7878", animation: "pop .4s ease" }}>{opWin ? "WIN" : "LOSE"}</div>}
           </div>
         </div>
 
@@ -999,47 +999,76 @@ function OnlineGame({ onBack }) {
 // ══════════════════════════════════════════════
 export default function App() {
   const [mode, setMode] = useState("title");
-  const profile = loadProfile();
+  const savedProfile = loadProfile("ai") || loadProfile("online");
+  const [nameInput, setNameInput] = useState(savedProfile?.name || "");
+  const [nameSet, setNameSet] = useState(!!savedProfile?.name);
+
+  function saveName() {
+    if (!nameInput.trim()) return;
+    const aiChips    = loadProfile("ai")?.chips ?? INIT_CHIPS;
+    const onlineChips = loadProfile("online")?.chips ?? INIT_CHIPS;
+    saveProfile("ai",     nameInput.trim(), aiChips);
+    saveProfile("online", nameInput.trim(), onlineChips);
+    setNameSet(true);
+  }
 
   if (mode === "ai")     return <AIGame     onBack={() => setMode("title")} />;
   if (mode === "online") return <OnlineGame onBack={() => setMode("title")} />;
+
+  const ai = loadProfile("ai");
+  const online = loadProfile("online");
+  const isWide = typeof window !== "undefined" && window.innerWidth >= 600;
 
   return (
     <div style={S.root}>
       <div style={S.bg}/>
       <div style={S.center}>
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: typeof window !== "undefined" && window.innerWidth >= 600 ? 96 : 64, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 8, textShadow: "0 0 40px rgba(255,224,138,.7),0 2px 0 #a07010" }}>J.A.K.</div>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: isWide ? 96 : 64, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 8, textShadow: "0 0 40px rgba(255,224,138,.7),0 2px 0 #a07010" }}>J.A.K.</div>
           <div style={{ fontSize: 11, color: "#7060a0", letterSpacing: 4, marginTop: 2 }}>大中小カードゲーム</div>
         </div>
-        {(() => {
-          const ai = loadProfile("ai");
-          const online = loadProfile("online");
-          const name = ai?.name || online?.name;
-          if (!name) return null;
-          return (
-            <div style={{ fontSize: 11, color: "#c9a84c", marginBottom: 8, textAlign: "center", lineHeight: 1.8 }}>
-              <div>おかえり、{name}！</div>
-              <div style={{ fontSize: 10, color: "#9080b8" }}>
-                AI: {(ai?.chips ?? INIT_CHIPS).toLocaleString()} | オンライン: {(online?.chips ?? INIT_CHIPS).toLocaleString()}
-              </div>
-            </div>
-          );
-        })()}
-        <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+
+        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
           {DECK.map((c, i) => (
             <div key={c.id} style={{ animation: `fc 1.8s ease-in-out ${i*0.3}s infinite alternate` }}>
               <Card card={c} size="md" winner />
             </div>
           ))}
         </div>
-        <div style={{ color: "#a090c0", fontSize: 12, textAlign: "center", lineHeight: 2, marginBottom: 24 }}>
+
+        <div style={{ color: "#a090c0", fontSize: 12, textAlign: "center", lineHeight: 2, marginBottom: 20 }}>
           <div>🃏 ジョーカー ＞ A エース ＞ K キング</div>
           <div style={{ fontSize: 10, opacity: .6 }}>3枚・1枚は伏せ。心理戦で勝ち抜け。</div>
         </div>
+
+        {/* 名前入力 */}
+        <div style={{ width: "100%", maxWidth: 280, marginBottom: 16 }}>
+          {nameSet ? (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: "#c9a84c", marginBottom: 4 }}>
+                {nameInput}
+              </div>
+              <div style={{ fontSize: 10, color: "#9080b8", marginBottom: 8 }}>
+                AI: {(ai?.chips ?? INIT_CHIPS).toLocaleString()} | オンライン: {(online?.chips ?? INIT_CHIPS).toLocaleString()}
+              </div>
+              <button style={{ ...S.ghost, fontSize: 11, padding: "4px 12px" }} onClick={() => setNameSet(false)}>名前を変更</button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...S.input, flex: 1, fontSize: 14 }}
+                value={nameInput}
+                onChange={e => setNameInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && saveName()}
+                placeholder="名前を入力してや"
+                maxLength={12} />
+              <button style={{ ...S.gold, padding: "10px 14px", fontSize: 13 }} onClick={saveName}>決定</button>
+            </div>
+          )}
+        </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 280 }}>
-          <button style={S.gold} onClick={() => setMode("ai")}>AI対戦</button>
-          <button style={{ ...S.blue, padding: "12px 22px", fontSize: 14, fontWeight: 700 }} onClick={() => setMode("online")}>オンライン対戦</button>
+          <button style={S.gold} onClick={() => { saveName(); setMode("ai"); }}>AI対戦</button>
+          <button style={{ ...S.blue, padding: "12px 22px", fontSize: 14, fontWeight: 700 }} onClick={() => { saveName(); setMode("online"); }}>オンライン対戦</button>
         </div>
       </div>
       <style>{`@keyframes fc{from{transform:translateY(0)}to{transform:translateY(-10px)}}`}</style>
