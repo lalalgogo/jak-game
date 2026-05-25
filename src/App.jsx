@@ -56,22 +56,27 @@ function aiAction(card, pot, toCall, aiChips, round) {
 }
 
 // ── ローカルストレージ ────────────────────────────────
-function loadProfile() {
+function loadProfile(mode) {
   try {
-    const s = localStorage.getItem("jak_profile");
+    const key = mode === "ai" ? "jak_ai" : "jak_online";
+    const s = localStorage.getItem(key);
     return s ? JSON.parse(s) : null;
   } catch { return null; }
 }
-function saveProfile(name, chips) {
-  try { localStorage.setItem("jak_profile", JSON.stringify({ name, chips })); } catch {}
+function saveProfile(mode, name, chips) {
+  try {
+    const key = mode === "ai" ? "jak_ai" : "jak_online";
+    localStorage.setItem(key, JSON.stringify({ name, chips }));
+  } catch {}
 }
 
 // ── Card ─────────────────────────────────────────────
 function Card({ card, hidden, size, winner }) {
-  const w  = size === "lg" ? 88  : size === "sm" ? 44  : 70;
-  const h  = size === "lg" ? 124 : size === "sm" ? 62  : 98;
-  const fs = size === "lg" ? 34  : size === "sm" ? 16  : 25;
-  const cs = size === "lg" ? 40  : size === "sm" ? 18  : 30;
+  const isWide = typeof window !== "undefined" && window.innerWidth >= 600;
+  const w  = size === "lg" ? (isWide ? 120 : 88)  : size === "sm" ? (isWide ? 60 : 44)  : (isWide ? 96 : 70);
+  const h  = size === "lg" ? (isWide ? 168 : 124) : size === "sm" ? (isWide ? 84 : 62)  : (isWide ? 134 : 98);
+  const fs = size === "lg" ? (isWide ? 46 : 34)   : size === "sm" ? (isWide ? 22 : 16)  : (isWide ? 34 : 25);
+  const cs = size === "lg" ? (isWide ? 54 : 40)   : size === "sm" ? (isWide ? 24 : 18)  : (isWide ? 40 : 30);
 
   if (hidden) return (
     <div style={{
@@ -195,15 +200,16 @@ function Card({ card, hidden, size, winner }) {
 }
 
 function Chips({ label, val, gold, diff }) {
+  const isWide = typeof window !== "undefined" && window.innerWidth >= 600;
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "5px 10px", borderRadius: 9, minWidth: 66,
+      padding: isWide ? "8px 16px" : "5px 10px", borderRadius: 9, minWidth: isWide ? 90 : 66,
       background: gold ? "rgba(201,168,76,.14)" : "rgba(255,255,255,.05)",
       border: `1px solid ${gold ? "rgba(201,168,76,.4)" : "rgba(255,255,255,.1)"}`,
     }}>
-      <div style={{ fontSize: 9, color: "#9080b8", letterSpacing: 1, marginBottom: 1 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: gold ? "#ffe08a" : "#ddd0f0", fontFamily: "monospace" }}>
+      <div style={{ fontSize: isWide ? 11 : 9, color: "#9080b8", letterSpacing: 1, marginBottom: 1 }}>{label}</div>
+      <div style={{ fontSize: isWide ? 20 : 16, fontWeight: 700, color: gold ? "#ffe08a" : "#ddd0f0", fontFamily: "monospace" }}>
         {(val ?? 0).toLocaleString()}
       </div>
       {diff !== undefined && diff !== 0 && (
@@ -220,7 +226,7 @@ function Log({ entries }) {
   useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [entries]);
   return (
     <div ref={ref} style={{
-      height: 72, overflowY: "auto", padding: "6px 10px",
+      height: typeof window !== "undefined" && window.innerWidth >= 600 ? 100 : 72, overflowY: "auto", padding: "6px 10px",
       background: "rgba(0,0,0,.3)", borderRadius: 8,
       border: "1px solid rgba(255,255,255,.07)",
     }}>
@@ -238,7 +244,7 @@ const S = {
   root:  { minHeight: "100vh", background: "#080514", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden", fontFamily: "sans-serif" },
   bg:    { position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 25%,#180d38,#080514 68%)" },
   center:{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 20 },
-  play:  { position: "relative", zIndex: 1, width: "100%", maxWidth: 400, padding: "12px 14px", boxSizing: "border-box" },
+  play:  { position: "relative", zIndex: 1, width: "100%", maxWidth: 640, padding: "12px 20px", boxSizing: "border-box" },
   area:  { display: "flex", flexDirection: "column", alignItems: "center", padding: 8, borderRadius: 10, marginBottom: 4, background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" },
   aLabel:{ fontSize: 9, color: "#7060a0", letterSpacing: 1, marginBottom: 5 },
   inputGroup: { display: "flex", flexDirection: "column", gap: 5 },
@@ -254,8 +260,8 @@ const S = {
 // AI対戦
 // ══════════════════════════════════════════════
 function AIGame({ onBack }) {
-  const profile = loadProfile();
-  const [pChips, setPChips]   = useState(profile?.chips && profile.chips > 0 ? profile.chips : INIT_CHIPS);
+  const profile = loadProfile("ai");
+  const [pChips, setPChips]   = useState(profile?.chips >= INIT_CHIPS ? profile.chips : INIT_CHIPS);
   const [aChips, setAChips]   = useState(INIT_CHIPS);
   const [pot, setPot]         = useState(0);
   const [pCard, setPCard]     = useState(null);
@@ -289,7 +295,8 @@ function AIGame({ onBack }) {
   useEffect(() => { if (!started) { setStarted(true); startGame(); } }, []);
 
   function startGame() {
-    const pc = profile?.chips && profile.chips > 0 ? profile.chips : INIT_CHIPS;
+    const saved = loadProfile("ai")?.chips ?? INIT_CHIPS;
+    const pc = saved >= INIT_CHIPS ? saved : INIT_CHIPS;
     setPChips(pc); setAChips(INIT_CHIPS);
     setLog([]); setRnd(1); setChipDiff(0);
     const first = Math.random() < 0.5;
@@ -349,7 +356,7 @@ function AIGame({ onBack }) {
     const diff = newPC - (startChips ?? roundStartChips);
     setChipDiff(diff);
     addLog(`収支: ${diff >= 0 ? "+" : ""}${diff}`, diff >= 0 ? "w" : "l");
-    saveProfile(playerName, newPC);
+    saveProfile("ai", playerName, newPC);
     if (newPC <= 0) { setOverMsg("チップが尽きた…"); setIsGameOver(true); }
     else if (newAC <= 0) { setOverMsg(`AIを破産させた！最終チップ: ${newPC}`); setIsGameOver(true); }
   }
@@ -557,7 +564,7 @@ function AIGame({ onBack }) {
 // オンライン対戦
 // ══════════════════════════════════════════════
 function OnlineGame({ onBack }) {
-  const profile = loadProfile();
+  const profile = loadProfile("online");
   const [screen, setScreen] = useState("lobby");
   const [roomId,   setRoomId]   = useState("");
   const [inputId,  setInputId]  = useState("");
@@ -636,7 +643,7 @@ function OnlineGame({ onBack }) {
     if (!nameInput.trim()) { setError("名前を入力してや"); return; }
     const rid = genRoomId(); const name = nameInput.trim();
     setMyName(name); setMyRole("host"); setRoomId(rid); setError("");
-    saveProfile(name, profile?.chips || INIT_CHIPS);
+    saveProfile("online", name, profile?.chips || INIT_CHIPS);
     await set(ref(db, `rooms/${rid}`), { phase: "waiting", host: { name, chips: INIT_CHIPS }, guest: null, round: 0 });
     subscribeRoom(rid); setScreen("wait");
   }
@@ -660,7 +667,7 @@ function OnlineGame({ onBack }) {
     if (!nameInput.trim()) { setError("名前を入力してや"); return; }
     const name = nameInput.trim();
     setMyName(name); setError("");
-    saveProfile(name, profile?.chips || INIT_CHIPS);
+    saveProfile("online", name, profile?.chips || INIT_CHIPS);
     setScreen("matching");
     const waitingRef = ref(db, "matching/waiting");
     const snap = await get(waitingRef);
@@ -1002,14 +1009,23 @@ export default function App() {
       <div style={S.bg}/>
       <div style={S.center}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 64, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 8, textShadow: "0 0 40px rgba(255,224,138,.7),0 2px 0 #a07010" }}>J.A.K.</div>
+          <div style={{ fontSize: typeof window !== "undefined" && window.innerWidth >= 600 ? 96 : 64, fontFamily: "Georgia,serif", color: "#ffe08a", letterSpacing: 8, textShadow: "0 0 40px rgba(255,224,138,.7),0 2px 0 #a07010" }}>J.A.K.</div>
           <div style={{ fontSize: 11, color: "#7060a0", letterSpacing: 4, marginTop: 2 }}>大中小カードゲーム</div>
         </div>
-        {profile && (
-          <div style={{ fontSize: 12, color: "#c9a84c", marginBottom: 8 }}>
-            おかえり、{profile.name}！チップ: {profile.chips?.toLocaleString()}
-          </div>
-        )}
+        {(() => {
+          const ai = loadProfile("ai");
+          const online = loadProfile("online");
+          const name = ai?.name || online?.name;
+          if (!name) return null;
+          return (
+            <div style={{ fontSize: 11, color: "#c9a84c", marginBottom: 8, textAlign: "center", lineHeight: 1.8 }}>
+              <div>おかえり、{name}！</div>
+              <div style={{ fontSize: 10, color: "#9080b8" }}>
+                AI: {(ai?.chips ?? INIT_CHIPS).toLocaleString()} | オンライン: {(online?.chips ?? INIT_CHIPS).toLocaleString()}
+              </div>
+            </div>
+          );
+        })()}
         <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
           {DECK.map((c, i) => (
             <div key={c.id} style={{ animation: `fc 1.8s ease-in-out ${i*0.3}s infinite alternate` }}>
