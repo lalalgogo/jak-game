@@ -436,9 +436,10 @@ function AIGame({ onBack }) {
   }
   function actReraise() {
     const { pot: p, pChips: pc, aChips: ac, toCall: tc, pCard: pcd, aCard: acd } = stateRef.current;
-    const r = Math.min(Math.max(slider, (tc || 0) + 10), Math.min(pc, ac + (tc || 0)));
-    const np = p + r; setPChips(pc - r); setPot(np); setToCall(0);
-    addLog(playerName + `: リレイズ(+${r})`); doAI(np, r, 3, pcd, acd, pc - r, ac);
+    const extra = Math.min(Math.max(slider, 10), Math.min(pc - tc, ac));
+    const total = tc + extra;
+    const np = p + total; setPChips(pc - total); setPot(np); setToCall(0);
+    addLog(playerName + `: リレイズ(コール${tc}+上乗せ${extra}=合計${total})`); doAI(np, total, 3, pcd, acd, pc - total, ac);
   }
   function goNextRound() {
     const { pChips: pc, aChips: ac, playerFirst: pf } = stateRef.current;
@@ -518,18 +519,23 @@ function AIGame({ onBack }) {
                 </div>
                 {toCall < pChips && aChips > 0 && (
                   <>
-                    <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                      <input type="range" min={Math.max(toCall + 10, 20)} max={Math.min(pChips, aChips + toCall)} step={1}
-                        value={Math.min(slider, Math.min(pChips, aChips + toCall))}
-                        onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
-                      <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, pChips, aChips + toCall)}</span>
+                    <div style={{ fontSize: 10, color: "#a090c0", textAlign: "center" }}>上乗せ額: +{Math.min(slider, pChips - toCall, aChips)}</div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {[["MIN",null],[-100,null],[+100,null],["ALL",null]].map(([label])=>(
+                        <button key={label} style={{ ...S.ghost, flex:1, padding:"5px 0", fontSize:10 }} onClick={()=>{
+                          const maxR=Math.min(pChips-toCall,aChips);
+                          if(label==="MIN") setSlider(10);
+                          else if(label==="ALL") setSlider(maxR);
+                          else setSlider(s=>Math.max(10,Math.min(s+label,maxR)));
+                        }}>{label>0?`+${label}`:label}</button>
+                      ))}
+                      <button style={{ ...S.gold, flex:1, padding:"5px 0", fontSize:10 }} onClick={actReraise}>送る</button>
                     </div>
-                    <div style={{ display: "flex", gap: 5 }}>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(toCall + 10)}>MIN</button>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max(toCall + 10, Math.min(s - 100, Math.min(pChips, aChips + toCall))))}>-100</button>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max(toCall + 10, Math.min(s + 100, Math.min(pChips, aChips + toCall))))}>+100</button>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(Math.min(pChips, aChips + toCall))}>ALL</button>
-                      <button style={{ ...S.gold, padding: "5px 10px", fontSize: 11 }} onClick={actReraise}>リレイズ</button>
+                    <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                      <input type="range" min={10} max={Math.min(pChips - toCall, aChips)} step={1}
+                        value={Math.min(slider, Math.min(pChips - toCall, aChips))}
+                        onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
+                      <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, pChips - toCall, aChips)}</span>
                     </div>
                   </>
                 )}
@@ -540,18 +546,21 @@ function AIGame({ onBack }) {
                   <button style={{ ...S.red, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actFold}>フォールド</button>
                   <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actCheck}>チェック</button>
                 </div>
+                <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                  {[["MIN",10],[-100,null],[+100,null],["ALL",null]].map(([label,val])=>(
+                    <button key={label} style={{ ...S.ghost, flex:1, padding:"4px 0", fontSize:10 }} onClick={()=>{
+                      if(label==="MIN") setSlider(10);
+                      else if(label==="ALL") setSlider(Math.min(pChips,aChips));
+                      else setSlider(s=>Math.max(10,Math.min(s+label,Math.min(pChips,aChips))));
+                    }}>{label>0?`+${label}`:label}</button>
+                  ))}
+                </div>
                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                   <input type="range" min={10} max={Math.min(pChips, aChips)} step={1}
                     value={Math.min(slider, Math.min(pChips, aChips))}
                     onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c", opacity: pChips <= 0 ? 0.3 : 1 }} disabled={pChips <= 0} />
                   <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, pChips, aChips)}</span>
-                </div>
-                <div style={{ display: "flex", gap: 5 }}>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(10)}>MIN</button>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max(10, Math.min(s - 100, Math.min(pChips, aChips))))}>-100</button>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max(10, Math.min(s + 100, Math.min(pChips, aChips))))}>+100</button>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(Math.min(pChips, aChips))}>ALL</button>
-                  <button style={{ ...S.gold, padding: "5px 10px", fontSize: 11, opacity: pChips <= 0 ? 0.4 : 1 }} onClick={actBet} disabled={pChips <= 0}>ベット</button>
+                  <button style={{ ...S.gold, padding: "7px 9px", fontSize: 11, opacity: pChips <= 0 ? 0.4 : 1 }} onClick={actBet} disabled={pChips <= 0}>ベット</button>
                 </div>
               </>
             )}
@@ -978,18 +987,22 @@ function OnlineGame({ onBack }) {
                 </div>
                 {gs.toCall < myChips() && opChips() > 0 && (
                   <>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {[["MIN",null],[-100,null],[+100,null],["ALL",null]].map(([label])=>(
+                        <button key={label} style={{ ...S.ghost, flex:1, padding:"5px 0", fontSize:10 }} onClick={()=>{
+                          const tc=gs.toCall??0;
+                          if(label==="MIN") setSlider(tc+10);
+                          else if(label==="ALL") setSlider(Math.min(myChips(),opChips()+tc));
+                          else setSlider(s=>Math.max(tc+10,Math.min(s+label,Math.min(myChips(),opChips()+tc))));
+                        }}>{label>0?`+${label}`:label}</button>
+                      ))}
+                      <button style={{ ...S.gold, flex:1, padding:"5px 0", fontSize:10 }} onClick={() => sendAction("raise", Math.min(slider, myChips(), opChips() + (gs.toCall ?? 0)))}>送る</button>
+                    </div>
                     <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                       <input type="range" min={Math.max((gs.toCall ?? 0) + 10, 20)} max={Math.min(myChips(), opChips() + (gs.toCall ?? 0))} step={1}
                         value={Math.min(slider, Math.min(myChips(), opChips() + (gs.toCall ?? 0)))}
                         onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
                       <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, myChips(), opChips() + (gs.toCall ?? 0))}</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 5 }}>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider((gs.toCall ?? 0) + 10)}>MIN</button>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max((gs.toCall ?? 0) + 10, Math.min(s - 100, Math.min(myChips(), opChips() + (gs.toCall ?? 0)))))}>-100</button>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max((gs.toCall ?? 0) + 10, Math.min(s + 100, Math.min(myChips(), opChips() + (gs.toCall ?? 0)))))}>+100</button>
-                      <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(Math.min(myChips(), opChips() + (gs.toCall ?? 0)))}>ALL</button>
-                      <button style={{ ...S.gold, padding: "5px 10px", fontSize: 11 }} onClick={() => sendAction("raise", Math.min(slider, myChips(), opChips() + (gs.toCall ?? 0)))}>リレイズ</button>
                     </div>
                   </>
                 )}
@@ -1000,20 +1013,21 @@ function OnlineGame({ onBack }) {
                   <button style={{ ...S.red, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("fold")}>フォールド</button>
                   <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("check")}>チェック</button>
                 </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[["MIN",null],[-100,null],[+100,null],["ALL",null]].map(([label])=>(
+                    <button key={label} style={{ ...S.ghost, flex:1, padding:"5px 0", fontSize:10 }} onClick={()=>{
+                      if(label==="MIN") setSlider(10);
+                      else if(label==="ALL") setSlider(Math.min(myChips(),opChips()));
+                      else setSlider(s=>Math.max(10,Math.min(s+label,Math.min(myChips(),opChips()))));
+                    }}>{label>0?`+${label}`:label}</button>
+                  ))}
+                  <button style={{ ...S.gold, flex:1, padding:"5px 0", fontSize:10 }} onClick={() => sendAction("raise", Math.min(slider, myChips(), opChips()))}>送る</button>
+                </div>
                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                   <input type="range" min={10} max={Math.min(myChips(), opChips())} step={1}
                     value={Math.min(slider, Math.min(myChips(), opChips()))}
                     onChange={e => setSlider(+e.target.value)} style={{ flex: 1, accentColor: "#c9a84c" }} />
                   <span style={{ color: "#ffe08a", fontSize: 11, minWidth: 32 }}>{Math.min(slider, myChips(), opChips())}</span>
-                </div>
-                <div style={{ display: "flex", gap: 5 }}>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(10)}>MIN</button>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max(10, Math.min(s - 100, Math.min(myChips(), opChips()))))}>-100</button>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(s => Math.max(10, Math.min(s + 100, Math.min(myChips(), opChips()))))}>+100</button>
-                  <button style={{ ...S.ghost, padding: "5px 8px", fontSize: 11 }} onClick={() => setSlider(Math.min(myChips(), opChips()))}>ALL</button>
-                  <button style={{ ...S.gold, padding: "5px 10px", fontSize: 11 }} onClick={() => sendAction("raise", Math.min(slider, myChips(), opChips()))}>ベット</button>
-                </div>
-                  <button style={{ ...S.gold, padding: "7px 9px", fontSize: 11 }} onClick={() => sendAction("raise", slider)}>ベット</button>
                 </div>
               </>
             )}
