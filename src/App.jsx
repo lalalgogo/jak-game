@@ -521,7 +521,7 @@ function AIGame({ onBack }) {
                   <>
                     <div style={{ fontSize: 10, color: "#a090c0", textAlign: "center" }}>上乗せ額: +{Math.min(slider, pChips - toCall, aChips)}</div>
                     <div style={{ display: "flex", gap: 4 }}>
-                      {[["MIN",null],[+10,null],[+100,null],["ALL",null]].map(([label])=>(
+                      {[["MIN",null],[-10,null],[+10,null],[+100,null],["ALL",null]].map(([label])=>(
                         <button key={label} style={{ ...S.ghost, flex:1, padding:"5px 0", fontSize:10 }} onClick={()=>{
                           const maxR=Math.min(pChips-toCall,aChips);
                           if(label==="MIN") setSlider(10);
@@ -547,7 +547,7 @@ function AIGame({ onBack }) {
                   <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actCheck}>チェック</button>
                 </div>
                 <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                  {[["MIN",null],[+10,null],[+100,null],["ALL",null]].map(([label,val])=>(
+                  {[["MIN",null],[-10,null],[+10,null],[+100,null],["ALL",null]].map(([label,val])=>(
                     <button key={label} style={{ ...S.ghost, flex:1, padding:"4px 0", fontSize:10 }} onClick={()=>{
                       if(label==="MIN") setSlider(10);
                       else if(label==="ALL") setSlider(Math.min(pChips,aChips));
@@ -989,7 +989,7 @@ function OnlineGame({ onBack }) {
                   <>
                     <div style={{ fontSize: 10, color: "#a090c0", textAlign: "center" }}>上乗せ額: +{Math.min(slider, myChips() - (gs.toCall??0), opChips())}</div>
                     <div style={{ display: "flex", gap: 4 }}>
-                      {[["MIN",null],[+10,null],[+100,null],["ALL",null]].map(([label])=>(
+                      {[["MIN",null],[-10,null],[+10,null],[+100,null],["ALL",null]].map(([label])=>(
                         <button key={label} style={{ ...S.ghost, flex:1, padding:"5px 0", fontSize:10 }} onClick={()=>{
                           const tc=gs.toCall??0;
                           const maxR=Math.min(myChips()-tc,opChips());
@@ -1020,7 +1020,7 @@ function OnlineGame({ onBack }) {
                   <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={() => sendAction("check")}>チェック</button>
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {[["MIN",null],[+10,null],[+100,null],["ALL",null]].map(([label])=>(
+                  {[["MIN",null],[-10,null],[+10,null],[+100,null],["ALL",null]].map(([label])=>(
                     <button key={label} style={{ ...S.ghost, flex:1, padding:"5px 0", fontSize:10 }} onClick={()=>{
                       if(label==="MIN") setSlider(10);
                       else if(label==="ALL") setSlider(Math.min(myChips(),opChips()));
