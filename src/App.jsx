@@ -547,7 +547,7 @@ function AIGame({ onBack }) {
                   <button style={{ ...S.blue, flex: 1, padding: "10px 8px", fontSize: 13 }} onClick={actCheck}>チェック</button>
                 </div>
                 <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                  {[["MIN",10],[-100,null],[+100,null],["ALL",null]].map(([label,val])=>(
+                  {[["MIN",null],[+10,null],[+100,null],["ALL",null]].map(([label,val])=>(
                     <button key={label} style={{ ...S.ghost, flex:1, padding:"4px 0", fontSize:10 }} onClick={()=>{
                       if(label==="MIN") setSlider(10);
                       else if(label==="ALL") setSlider(Math.min(pChips,aChips));
